@@ -56,7 +56,7 @@ export interface UpdateSetRequest {
  * Progress tracking types
  */
 
-export interface PersonalRecord {
+export interface PersonalRecordResponse {
   exercise_name: string;
   weight: number;
   reps: number;
