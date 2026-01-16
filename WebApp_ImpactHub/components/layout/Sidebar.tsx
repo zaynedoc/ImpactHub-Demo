@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Dumbbell,
@@ -12,8 +12,17 @@ import {
   LogOut,
   Menu,
   X,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+interface Profile {
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+}
 
 const sidebarLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -25,7 +34,50 @@ const sidebarLinks = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('username, full_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        setProfile(profileData);
+      }
+    }
+
+    loadUserData();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  }
+
+  const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
+  const displayEmail = user?.email || '';
 
   return (
     <>
@@ -64,8 +116,6 @@ export function Sidebar() {
           <nav className="flex-1 py-6 px-3 space-y-1">
             {sidebarLinks.map((link) => {
               const Icon = link.icon;
-              // For exact match (Dashboard), only match exact path
-              // For other links, match if path starts with the link href
               const isActive = link.exact 
                 ? pathname === link.href
                 : pathname === link.href || pathname.startsWith(link.href + '/');
@@ -89,12 +139,36 @@ export function Sidebar() {
             })}
           </nav>
 
+          {/* User profile section */}
           <div className="p-3 border-t border-main/30">
+            <div className="flex items-center gap-3 px-3 py-2 mb-2">
+              <div className="w-9 h-9 rounded-full bg-main/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-5 h-5 text-main" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-bright-accent truncate">
+                  {displayName}
+                </p>
+                <p className="text-xs text-muted-accent truncate">
+                  {displayEmail}
+                </p>
+              </div>
+            </div>
             <button
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-muted-accent hover:text-accent hover:bg-main/20 transition-all"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-muted-accent hover:text-accent hover:bg-main/20 transition-all disabled:opacity-50"
             >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              <span>Log out</span>
+              <LogOut className={cn("w-5 h-5 flex-shrink-0", isLoggingOut && "animate-pulse")} />
+              <span>{isLoggingOut ? 'Logging out...' : 'Log out'}</span>
             </button>
           </div>
         </div>

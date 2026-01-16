@@ -28,3 +28,33 @@ export async function createClient() {
     }
   );
 }
+
+/**
+ * Get the current authenticated user from the server.
+ * Returns null if not authenticated.
+ */
+export async function getUser() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return null;
+  }
+  
+  return user;
+}
+
+/**
+ * Get the current session from the server.
+ * Returns null if no session exists.
+ */
+export async function getSession() {
+  const supabase = await createClient();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error || !session) {
+    return null;
+  }
+  
+  return session;
+}

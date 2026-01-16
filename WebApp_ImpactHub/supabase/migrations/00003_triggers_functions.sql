@@ -2,6 +2,7 @@
 -- ImpactHub / LiftLog+ Database Triggers and Functions
 -- Phase 2: Automation and Business Logic
 -- ============================================================================
+-- NOTE: This file is idempotent - safe to run multiple times
 
 -- ============================================================================
 -- TIMESTAMP MANAGEMENT
@@ -15,6 +16,13 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Drop existing triggers if they exist (makes script idempotent)
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
+DROP TRIGGER IF EXISTS update_workouts_updated_at ON public.workouts;
+DROP TRIGGER IF EXISTS update_program_templates_updated_at ON public.program_templates;
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON public.user_settings;
 
 -- Apply updated_at trigger to all tables that have this column
 CREATE TRIGGER update_profiles_updated_at
@@ -82,6 +90,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to handle new user signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
@@ -103,6 +112,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_deleted ON auth.users;
 CREATE TRIGGER on_auth_user_deleted
     BEFORE DELETE ON auth.users
     FOR EACH ROW
@@ -186,6 +196,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to check for PRs on new sets
+DROP TRIGGER IF EXISTS check_pr_on_set_insert ON public.sets;
 CREATE TRIGGER check_pr_on_set_insert
     AFTER INSERT ON public.sets
     FOR EACH ROW

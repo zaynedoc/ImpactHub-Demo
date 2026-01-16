@@ -2,6 +2,7 @@
 -- ImpactHub / LiftLog+ Row Level Security Policies
 -- Phase 2: Database Security with Supabase RLS
 -- ============================================================================
+-- NOTE: This file is idempotent - safe to run multiple times
 
 -- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -20,6 +21,12 @@ ALTER TABLE public.personal_records ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- PROFILES POLICIES
 -- ============================================================================
+
+-- Drop existing policies if they exist (makes script idempotent)
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view public profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 
 -- Users can view their own profile
 CREATE POLICY "Users can view own profile"

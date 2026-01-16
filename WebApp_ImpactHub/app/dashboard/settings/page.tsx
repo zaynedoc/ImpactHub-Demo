@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { User, Bell, Shield, CreditCard, Download, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Bell, Shield, CreditCard, Download, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -59,12 +60,93 @@ export default function SettingsPage() {
 }
 
 function ProfileSettings() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [formState, setFormState] = useState({
-    username: 'johndoe',
-    fullName: 'John Doe',
-    email: 'john@example.com',
-    bio: 'Fitness enthusiast. Powerlifting hobbyist.',
+    username: '',
+    fullName: '',
+    email: '',
+    bio: '',
   });
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Get profile data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase as any)
+          .from('profiles')
+          .select('username, full_name, bio')
+          .eq('id', user.id)
+          .single();
+
+        setFormState({
+          username: profile?.username || '',
+          fullName: profile?.full_name || user.user_metadata?.full_name || '',
+          email: user.email || '',
+          bio: profile?.bio || '',
+        });
+      }
+      setIsLoading(false);
+    }
+
+    loadProfile();
+  }, [supabase]);
+
+  async function handleSave() {
+    setIsSaving(true);
+    setMessage(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setMessage({ type: 'error', text: 'Not authenticated' });
+        return;
+      }
+
+      // Update profile
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('profiles')
+        .update({
+          username: formState.username.toLowerCase() || null,
+          full_name: formState.fullName || null,
+          bio: formState.bio || null,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        if (error.code === '23505') {
+          setMessage({ type: 'error', text: 'Username already taken' });
+        } else {
+          setMessage({ type: 'error', text: error.message });
+        }
+      } else {
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to update profile' });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const initials = formState.fullName
+    ? formState.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : formState.email?.slice(0, 2).toUpperCase() || '??';
+
+  if (isLoading) {
+    return (
+      <div className="glass-surface rounded-xl p-6 flex items-center justify-center min-h-[300px]">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-3">
@@ -73,7 +155,7 @@ function ProfileSettings() {
       <div className="space-y-6">
         <div className="flex items-center gap-6">
           <div className="w-20 h-20 bg-gradient-to-br from-main to-accent rounded-full flex items-center justify-center text-2xl font-bold text-bright-accent shadow-glow-main">
-            JD
+            {initials}
           </div>
           <div>
             <Button variant="outline" size="sm">Change Avatar</Button>
@@ -85,7 +167,8 @@ function ProfileSettings() {
           <Input
             label="Username"
             value={formState.username}
-            onChange={(e) => setFormState({ ...formState, username: e.target.value })}
+            onChange={(e) => setFormState({ ...formState, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
+            placeholder="your_username"
           />
           <Input
             label="Full Name"
@@ -98,7 +181,8 @@ function ProfileSettings() {
           label="Email"
           type="email"
           value={formState.email}
-          onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+          disabled
+          helperText="Email cannot be changed here"
         />
 
         <div>
@@ -108,11 +192,18 @@ function ProfileSettings() {
             rows={3}
             value={formState.bio}
             onChange={(e) => setFormState({ ...formState, bio: e.target.value })}
+            placeholder="Tell us about yourself..."
           />
         </div>
 
+        {message && (
+          <div className={`p-3 rounded-lg ${message.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+            {message.text}
+          </div>
+        )}
+
         <div className="flex justify-end">
-          <Button glow>Save Changes</Button>
+          <Button glow onClick={handleSave} isLoading={isSaving}>Save Changes</Button>
         </div>
       </div>
     </div>
