@@ -286,17 +286,92 @@ function NotificationToggle({
 }
 
 function SecuritySettings() {
-  return (
-    <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
-      <div className="glass-surface rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-bright-accent mb-6">Change Password</h2>
-        <div className="space-y-4 max-w-md">
-          <Input label="Current Password" type="password" />
-          <Input label="New Password" type="password" />
-          <Input label="Confirm New Password" type="password" />
-          <Button glow>Update Password</Button>
-        </div>
+const [currentPassword, setCurrentPassword] = useState('');
+const [newPassword, setNewPassword] = useState('');
+const [confirmPassword, setConfirmPassword] = useState('');
+const [isChangingPassword, setIsChangingPassword] = useState(false);
+const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+const supabase = createClient();
+
+const handlePasswordChange = async () => {
+  setPasswordMessage(null);
+
+  // Validation
+  if (!newPassword || !confirmPassword) {
+    setPasswordMessage({ type: 'error', text: 'Please fill in all password fields' });
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    setPasswordMessage({ type: 'error', text: 'New password must be at least 6 characters' });
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
+    return;
+  }
+
+  setIsChangingPassword(true);
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      setPasswordMessage({ type: 'error', text: error.message });
+    } else {
+      setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  } catch (error) {
+    setPasswordMessage({ type: 'error', text: 'Failed to update password' });
+  } finally {
+    setIsChangingPassword(false);
+  }
+};
+
+return (
+  <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
+    <div className="glass-surface rounded-xl p-6">
+      <h2 className="text-xl font-semibold text-bright-accent mb-6">Change Password</h2>
+      <div className="space-y-4 max-w-md">
+        <Input 
+          label="New Password" 
+          type="password" 
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Enter new password"
+        />
+        <Input 
+          label="Confirm New Password" 
+          type="password" 
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirm new password"
+        />
+          
+        {passwordMessage && (
+          <div className={`p-3 rounded-lg ${passwordMessage.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+            {passwordMessage.text}
+          </div>
+        )}
+          
+        <Button glow onClick={handlePasswordChange} disabled={isChangingPassword}>
+          {isChangingPassword ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            'Update Password'
+          )}
+        </Button>
       </div>
+    </div>
 
       <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Two-Factor Authentication</h2>
@@ -354,6 +429,100 @@ function BillingSettings() {
 }
 
 function DataSettings() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const exportData = async (format: 'json' | 'csv') => {
+    setIsExporting(true);
+    setExportMessage(null);
+
+    try {
+      // Fetch all workouts with exercises and sets
+      const response = await fetch('/api/workouts?pageSize=1000');
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data');
+      }
+
+      const workouts = result.data || [];
+
+      if (workouts.length === 0) {
+        setExportMessage({ type: 'error', text: 'No workout data to export' });
+        setIsExporting(false);
+        return;
+      }
+
+      let content: string;
+      let filename: string;
+      let mimeType: string;
+
+      if (format === 'json') {
+        content = JSON.stringify(workouts, null, 2);
+        filename = `impacthub-workouts-${new Date().toISOString().split('T')[0]}.json`;
+        mimeType = 'application/json';
+      } else {
+        // CSV format - flatten the data
+        const csvRows: string[] = [];
+        csvRows.push('Workout Title,Date,Exercise,Set Number,Weight (lbs),Reps,RIR');
+
+        workouts.forEach((workout: {
+          title: string;
+          workout_date: string;
+          workout_exercises?: Array<{
+            exercise_name: string;
+            sets?: Array<{
+              set_number: number;
+              weight: number;
+              reps: number;
+              rir: number | null;
+            }>;
+          }>;
+        }) => {
+          if (workout.workout_exercises && workout.workout_exercises.length > 0) {
+            workout.workout_exercises.forEach((exercise) => {
+              if (exercise.sets && exercise.sets.length > 0) {
+                exercise.sets.forEach((set) => {
+                  csvRows.push(
+                    `"${workout.title}","${workout.workout_date}","${exercise.exercise_name}",${set.set_number},${set.weight},${set.reps},${set.rir ?? ''}`
+                  );
+                });
+              } else {
+                csvRows.push(
+                  `"${workout.title}","${workout.workout_date}","${exercise.exercise_name}",,,, `
+                );
+              }
+            });
+          } else {
+            csvRows.push(`"${workout.title}","${workout.workout_date}",,,,,`);
+          }
+        });
+
+        content = csvRows.join('\n');
+        filename = `impacthub-workouts-${new Date().toISOString().split('T')[0]}.csv`;
+        mimeType = 'text/csv';
+      }
+
+      // Create and download file
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setExportMessage({ type: 'success', text: `Successfully exported ${workouts.length} workouts as ${format.toUpperCase()}` });
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportMessage({ type: 'error', text: 'Failed to export data' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
       <div className="glass-surface rounded-xl p-6">
@@ -361,13 +530,36 @@ function DataSettings() {
         <p className="text-muted-accent mb-4">
           Download a copy of all your workout data in CSV or JSON format.
         </p>
+        
+        {exportMessage && (
+          <div className={`p-3 rounded-lg mb-4 ${exportMessage.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+            {exportMessage.text}
+          </div>
+        )}
+        
         <div className="flex gap-3">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
+          <Button 
+            variant="outline" 
+            onClick={() => exportData('csv')}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
             Export CSV
           </Button>
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
+          <Button 
+            variant="outline" 
+            onClick={() => exportData('json')}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
             Export JSON
           </Button>
         </div>

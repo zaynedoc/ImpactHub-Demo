@@ -598,6 +598,9 @@ export interface Database {
       weight_unit: WeightUnit;
       theme: Theme;
     };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 }
 

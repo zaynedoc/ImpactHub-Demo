@@ -1,77 +1,112 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Calendar, Dumbbell, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, Calendar, Dumbbell, MoreVertical, Trash2, Edit, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Toast, useToastLocal } from '@/components/ui/Toast';
 
-const mockWorkouts = [
-  {
-    id: '1',
-    title: 'Push Day - Chest Focus',
-    date: '2024-01-15',
-    exercises: [
-      { name: 'Bench Press', sets: 4 },
-      { name: 'Incline Dumbbell Press', sets: 3 },
-      { name: 'Cable Flyes', sets: 3 },
-      { name: 'Tricep Pushdowns', sets: 3 },
-      { name: 'Overhead Tricep Extension', sets: 2 },
-    ],
-    duration: '45 min',
-    totalVolume: '8,450 lbs',
-  },
-  {
-    id: '2',
-    title: 'Pull Day - Back Focus',
-    date: '2024-01-13',
-    exercises: [
-      { name: 'Deadlift', sets: 4 },
-      { name: 'Barbell Rows', sets: 4 },
-      { name: 'Lat Pulldowns', sets: 3 },
-      { name: 'Face Pulls', sets: 3 },
-      { name: 'Bicep Curls', sets: 3 },
-      { name: 'Hammer Curls', sets: 2 },
-    ],
-    duration: '52 min',
-    totalVolume: '12,200 lbs',
-  },
-  {
-    id: '3',
-    title: 'Leg Day',
-    date: '2024-01-11',
-    exercises: [
-      { name: 'Squats', sets: 5 },
-      { name: 'Romanian Deadlifts', sets: 4 },
-      { name: 'Leg Press', sets: 3 },
-      { name: 'Leg Curls', sets: 3 },
-    ],
-    duration: '38 min',
-    totalVolume: '15,800 lbs',
-  },
-  {
-    id: '4',
-    title: 'Upper Body',
-    date: '2024-01-09',
-    exercises: [
-      { name: 'Overhead Press', sets: 4 },
-      { name: 'Pull-ups', sets: 4 },
-      { name: 'Dumbbell Bench', sets: 3 },
-      { name: 'Cable Rows', sets: 3 },
-    ],
-    duration: '42 min',
-    totalVolume: '7,600 lbs',
-  },
-];
+interface WorkoutExercise {
+  id: string;
+  exercise_name: string;
+  order_index: number;
+  sets?: { weight: number; reps: number }[];
+}
+
+interface Workout {
+  id: string;
+  title: string;
+  workout_date: string;
+  notes: string | null;
+  duration_minutes: number | null;
+  status: string;
+  workout_exercises?: WorkoutExercise[];
+}
 
 export default function WorkoutsPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [workouts] = useState(mockWorkouts);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const { toast, showToast, hideToast } = useToastLocal();
 
-  const filteredWorkouts = workouts.filter((workout) =>
-    workout.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
+
+  const fetchWorkouts = async () => {
+    try {
+      const response = await fetch('/api/workouts?pageSize=50');
+      const result = await response.json();
+      
+      if (result.success) {
+        setWorkouts(result.data || []);
+      } else {
+        console.error('Failed to fetch workouts:', result.error);
+        showToast('Failed to load workouts', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching workouts:', error);
+      showToast('Failed to load workouts', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWorkout = async (workoutId: string) => {
+    if (!confirm('Are you sure you want to delete this workout?')) return;
+
+    try {
+      const response = await fetch(`/api/workouts/${workoutId}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setWorkouts(workouts.filter(w => w.id !== workoutId));
+        showToast('Workout deleted successfully', 'success');
+      } else {
+        showToast(result.error || 'Failed to delete workout', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      showToast('Failed to delete workout', 'error');
+    }
+  };
+
+  const clearDateFilter = () => {
+    setStartDate('');
+    setEndDate('');
+    setShowDateFilter(false);
+  };
+
+  const filteredWorkouts = workouts.filter((workout) => {
+    // Search filter
+    const matchesSearch = workout.title.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Date filter
+    let matchesDate = true;
+    if (startDate) {
+      matchesDate = matchesDate && workout.workout_date >= startDate;
+    }
+    if (endDate) {
+      matchesDate = matchesDate && workout.workout_date <= endDate;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -98,11 +133,43 @@ export default function WorkoutsPage() {
             className="pl-10"
           />
         </div>
-        <Button variant="outline">
+        <Button 
+          variant="outline" 
+          onClick={() => setShowDateFilter(!showDateFilter)}
+          className={startDate || endDate ? 'border-main text-accent' : ''}
+        >
           <Calendar className="w-4 h-4 mr-2" />
-          Filter by Date
+          {startDate || endDate ? 'Date Filtered' : 'Filter by Date'}
         </Button>
       </div>
+
+      {/* Date Filter Panel */}
+      {showDateFilter && (
+        <div className="glass-surface rounded-xl p-4 opacity-0 animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-muted-accent mb-2">From</label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-muted-accent mb-2">To</label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearDateFilter}>
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
 
       {filteredWorkouts.length === 0 ? (
         <EmptyState
@@ -127,9 +194,17 @@ export default function WorkoutsPage() {
       ) : (
         <div className="space-y-4">
           {filteredWorkouts.map((workout) => (
-            <WorkoutCard key={workout.id} workout={workout} />
+            <WorkoutCard 
+              key={workout.id} 
+              workout={workout} 
+              onDelete={handleDeleteWorkout}
+            />
           ))}
         </div>
+      )}
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
   );
@@ -137,10 +212,23 @@ export default function WorkoutsPage() {
 
 function WorkoutCard({
   workout,
+  onDelete,
 }: {
-  workout: (typeof mockWorkouts)[0];
+  workout: Workout;
+  onDelete: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  const exerciseCount = workout.workout_exercises?.length || 0;
+  const exercises = workout.workout_exercises || [];
+  
+  // Calculate total volume from sets
+  let totalVolume = 0;
+  exercises.forEach(ex => {
+    ex.sets?.forEach(set => {
+      totalVolume += set.weight * set.reps;
+    });
+  });
 
   return (
     <div className="glass-surface rounded-xl p-6 hover:border-main/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-main group">
@@ -156,31 +244,35 @@ function WorkoutCard({
               </h3>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-accent">
                 <span>
-                  {new Date(workout.date).toLocaleDateString('en-US', {
+                  {new Date(workout.workout_date).toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric',
                   })}
                 </span>
-                <span>{workout.exercises.length} exercises</span>
-                <span>{workout.duration}</span>
-                <span>{workout.totalVolume} volume</span>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {workout.exercises.slice(0, 4).map((exercise, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-main/20 rounded text-xs text-accent border border-main/30"
-                  >
-                    {exercise.name}
-                  </span>
-                ))}
-                {workout.exercises.length > 4 && (
-                  <span className="px-2 py-1 bg-muted-main/50 rounded text-xs text-muted-accent border border-main/20">
-                    +{workout.exercises.length - 4} more
-                  </span>
+                <span>{exerciseCount} exercises</span>
+                {workout.duration_minutes && <span>{workout.duration_minutes} min</span>}
+                {totalVolume > 0 && (
+                  <span>{totalVolume.toLocaleString()} lbs volume</span>
                 )}
               </div>
+              {exercises.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {exercises.slice(0, 4).map((exercise) => (
+                    <span
+                      key={exercise.id}
+                      className="px-2 py-1 bg-main/20 rounded text-xs text-accent border border-main/30"
+                    >
+                      {exercise.exercise_name}
+                    </span>
+                  ))}
+                  {exercises.length > 4 && (
+                    <span className="px-2 py-1 bg-muted-main/50 rounded text-xs text-muted-accent border border-main/20">
+                      +{exercises.length - 4} more
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </Link>
@@ -200,11 +292,19 @@ function WorkoutCard({
                 onClick={() => setMenuOpen(false)}
               />
               <div className="absolute right-0 top-full mt-1 w-40 glass-surface rounded-lg shadow-xl z-20">
-                <button className="w-full px-4 py-2 text-left text-sm text-bright-accent hover:bg-main/20 flex items-center gap-2 rounded-t-lg transition-colors">
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 rounded-b-lg transition-colors">
+                <Link href={`/dashboard/workouts/${workout.id}/edit`}>
+                  <button className="w-full px-4 py-2 text-left text-sm text-bright-accent hover:bg-main/20 flex items-center gap-2 rounded-t-lg transition-colors">
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </button>
+                </Link>
+                <button 
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(workout.id);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 rounded-b-lg transition-colors"
+                >
                   <Trash2 className="w-4 h-4" />
                   Delete
                 </button>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   TrendingUp,
   Trophy,
@@ -8,36 +9,103 @@ import {
   Calendar,
   BarChart3,
   Target,
+  Loader2,
+  Dumbbell,
+  Plus,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
-const mockPRs = [
-  { exercise: 'Bench Press', current: 225, previous: 215, date: '2024-01-15', unit: 'lbs' },
-  { exercise: 'Squat', current: 315, previous: 305, date: '2024-01-11', unit: 'lbs' },
-  { exercise: 'Deadlift', current: 405, previous: 385, date: '2024-01-08', unit: 'lbs' },
-  { exercise: 'Overhead Press', current: 145, previous: 140, date: '2024-01-05', unit: 'lbs' },
-  { exercise: 'Barbell Row', current: 205, previous: 195, date: '2024-01-03', unit: 'lbs' },
-];
+interface PR {
+  exercise_name: string;
+  weight: number;
+  reps: number;
+  date: string;
+}
 
-const mockVolumeData = [
-  { week: 'Week 1', volume: 45000 },
-  { week: 'Week 2', volume: 48000 },
-  { week: 'Week 3', volume: 52000 },
-  { week: 'Week 4', volume: 49000 },
-  { week: 'Week 5', volume: 55000 },
-  { week: 'Week 6', volume: 58000 },
-];
+interface VolumeData {
+  date: string;
+  total_volume: number;
+  total_sets: number;
+  total_reps: number;
+}
 
-const mockMuscleVolume = [
-  { muscle: 'Chest', sets: 18, target: 20 },
-  { muscle: 'Back', sets: 22, target: 20 },
-  { muscle: 'Shoulders', sets: 14, target: 15 },
-  { muscle: 'Legs', sets: 16, target: 20 },
-  { muscle: 'Arms', sets: 12, target: 12 },
-  { muscle: 'Core', sets: 6, target: 10 },
-];
+interface VolumeSummary {
+  total_volume: number;
+  total_sets: number;
+  total_reps: number;
+  avg_volume_per_workout: number;
+  workout_count: number;
+}
+
+interface StreakInfo {
+  current_streak: number;
+  longest_streak: number;
+  last_workout_date: string | null;
+}
 
 export default function ProgressPage() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const [prs, setPrs] = useState<PR[]>([]);
+  const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
+  const [volumeSummary, setVolumeSummary] = useState<VolumeSummary | null>(null);
+  const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const getDaysForRange = (range: 'week' | 'month' | 'year') => {
+    switch (range) {
+      case 'week': return 7;
+      case 'month': return 30;
+      case 'year': return 365;
+    }
+  };
+
+  useEffect(() => {
+    fetchProgressData();
+  }, [timeRange]);
+
+  const fetchProgressData = async () => {
+    setIsLoading(true);
+    const days = getDaysForRange(timeRange);
+
+    try {
+      // Fetch PRs
+      const prsRes = await fetch('/api/progress/prs?limit=10');
+      const prsData = await prsRes.json();
+      if (prsData.success) {
+        setPrs(prsData.data || []);
+      }
+
+      // Fetch volume data
+      const volumeRes = await fetch(`/api/progress/volume?days=${days}`);
+      const volumeDataRes = await volumeRes.json();
+      if (volumeDataRes.success) {
+        setVolumeData(volumeDataRes.data?.daily || []);
+        setVolumeSummary(volumeDataRes.data?.summary || null);
+      }
+
+      // Fetch streak info
+      const streakRes = await fetch('/api/progress/streaks');
+      const streakData = await streakRes.json();
+      if (streakData.success) {
+        setStreakInfo(streakData.data);
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasData = prs.length > 0 || volumeData.length > 0 || (streakInfo && streakInfo.current_streak > 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,159 +131,202 @@ export default function ProgressPage() {
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={<TrendingUp className="w-5 h-5" />}
           label="Total Volume"
-          value="307,000 lbs"
-          change="+15.2%"
-          changeType="positive"
+          value={volumeSummary ? `${volumeSummary.total_volume.toLocaleString()} lbs` : '0 lbs'}
+          change={volumeSummary && volumeSummary.total_sets > 0 ? `${volumeSummary.total_sets} sets` : 'No data yet'}
+          changeType={volumeSummary && volumeSummary.total_volume > 0 ? 'positive' : 'neutral'}
+          delay={0}
         />
         <StatCard
           icon={<Trophy className="w-5 h-5" />}
-          label="New PRs"
-          value="5"
-          change="This month"
-          changeType="neutral"
+          label="Personal Records"
+          value={prs.length.toString()}
+          change="All time"
+          changeType={prs.length > 0 ? 'positive' : 'neutral'}
+          delay={1}
         />
         <StatCard
           icon={<Flame className="w-5 h-5" />}
           label="Workout Streak"
-          value="14 days"
-          change="Best: 21 days"
-          changeType="neutral"
+          value={streakInfo ? `${streakInfo.current_streak} days` : '0 days'}
+          change={streakInfo ? `Best: ${streakInfo.longest_streak} days` : 'Start training!'}
+          changeType={streakInfo && streakInfo.current_streak > 0 ? 'positive' : 'neutral'}
+          delay={2}
         />
         <StatCard
           icon={<Calendar className="w-5 h-5" />}
           label="Workouts"
-          value="18"
-          change="This month"
-          changeType="neutral"
+          value={volumeSummary ? volumeSummary.workout_count.toString() : '0'}
+          change={`This ${timeRange}`}
+          changeType={volumeSummary && volumeSummary.workout_count > 0 ? 'positive' : 'neutral'}
+          delay={3}
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-3">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-main" />
-              Weekly Volume
-            </h2>
-          </div>
-          
-          <div className="h-64 flex items-end gap-2">
-            {mockVolumeData.map((data, index) => {
-              const maxVolume = Math.max(...mockVolumeData.map((d) => d.volume));
-              const height = (data.volume / maxVolume) * 100;
+      {!hasData ? (
+        <EmptyState
+          icon={<Dumbbell className="w-8 h-8 text-muted-accent" />}
+          title="No progress data yet"
+          description="Start logging workouts to track your progress over time"
+          action={
+            <Link href="/dashboard/workouts/new">
+              <Button glow>
+                <Plus className="w-4 h-4 mr-2" />
+                Log First Workout
+              </Button>
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          {/* Volume Chart */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-3">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-main" />
+                  Volume Over Time
+                </h2>
+              </div>
               
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center gap-2 group">
-                  <div
-                    className="w-full bg-gradient-to-t from-main to-accent rounded-t-md transition-all duration-300 group-hover:shadow-glow-main"
-                    style={{ height: `${height}%` }}
-                  />
-                  <span className="text-xs text-muted-accent group-hover:text-accent transition-colors">{data.week.split(' ')[1]}</span>
-                </div>
-              );
-            })}
-          </div>
-          
-          <div className="mt-4 text-center text-sm text-muted-accent">
-            Total: <span className="text-accent font-medium">{mockVolumeData.reduce((acc, d) => acc + d.volume, 0).toLocaleString()} lbs</span>
-          </div>
-        </div>
-
-        <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-4">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
-              <Target className="w-5 h-5 text-accent" />
-              Weekly Sets by Muscle
-            </h2>
-          </div>
-          
-          <div className="space-y-4">
-            {mockMuscleVolume.map((muscle) => {
-              const percentage = Math.min((muscle.sets / muscle.target) * 100, 100);
-              const isOverTarget = muscle.sets >= muscle.target;
-              
-              return (
-                <div key={muscle.muscle} className="group">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-bright-accent/80 group-hover:text-bright-accent transition-colors">{muscle.muscle}</span>
-                    <span className={isOverTarget ? 'text-accent' : 'text-muted-accent'}>
-                      {muscle.sets}/{muscle.target} sets
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted-main/50 rounded-full overflow-hidden border border-main/20">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isOverTarget ? 'bg-gradient-to-r from-main to-accent' : 'bg-main'
-                      }`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-5">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-accent" />
-            Personal Records
-          </h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-sm text-muted-accent border-b border-main/30">
-                <th className="pb-3 font-medium">Exercise</th>
-                <th className="pb-3 font-medium">Current PR</th>
-                <th className="pb-3 font-medium">Previous</th>
-                <th className="pb-3 font-medium">Improvement</th>
-                <th className="pb-3 font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockPRs.map((pr, index) => {
-                const improvement = pr.current - pr.previous;
-                const percentImprovement = ((improvement / pr.previous) * 100).toFixed(1);
-                
-                return (
-                  <tr key={index} className="border-b border-main/20 hover:bg-main/10 transition-colors">
-                    <td className="py-4">
-                      <span className="font-medium text-bright-accent">{pr.exercise}</span>
-                    </td>
-                    <td className="py-4">
-                      <span className="text-accent font-semibold">
-                        {pr.current} {pr.unit}
-                      </span>
-                    </td>
-                    <td className="py-4 text-muted-accent">
-                      {pr.previous} {pr.unit}
-                    </td>
-                    <td className="py-4">
-                      <span className="text-main">
-                        +{improvement} {pr.unit} ({percentImprovement}%)
-                      </span>
-                    </td>
-                    <td className="py-4 text-muted-accent">
-                      {new Date(pr.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
+              {volumeData.length > 0 ? (
+                <>
+                  <div className="flex flex-col">
+                    <div className="h-52 flex items-end gap-2">
+                      {volumeData.slice(-7).map((data, index) => {
+                        const maxVolume = Math.max(...volumeData.map((d) => d.total_volume));
+                        const height = maxVolume > 0 ? (data.total_volume / maxVolume) * 100 : 0;
+                        
+                        return (
+                          <div 
+                            key={index} 
+                            className="flex-1 flex items-end justify-center group"
+                            style={{ height: '100%' }}
+                          >
+                            <div
+                              className="w-full bg-gradient-to-t from-main to-accent rounded-t-md transition-all duration-300 group-hover:shadow-glow-main"
+                              style={{ height: `${Math.max(height, 4)}%`, minHeight: '4px' }}
+                            />
+                          </div>
+                        );
                       })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      {volumeData.slice(-7).map((data, index) => (
+                        <div key={index} className="flex-1 text-center">
+                          <span className="text-xs text-muted-accent">
+                            {new Date(data.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-center text-sm text-muted-accent">
+                    Total: <span className="text-accent font-medium">{volumeSummary?.total_volume.toLocaleString() || 0} lbs</span>
+                  </div>
+                </>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-muted-accent">
+                  No volume data for this period
+                </div>
+              )}
+            </div>
+
+            {/* Sets Summary */}
+            <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
+                  <Target className="w-5 h-5 text-accent" />
+                  Training Summary
+                </h2>
+              </div>
+              
+              {volumeSummary && volumeSummary.total_sets > 0 ? (
+                <div className="space-y-6">
+                  <div className="text-center p-6 bg-muted-main/30 rounded-xl border border-main/20">
+                    <div className="text-4xl font-bold text-accent mb-2">
+                      {volumeSummary.total_sets}
+                    </div>
+                    <div className="text-muted-accent">Total Sets</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 bg-muted-main/30 rounded-lg border border-main/20">
+                      <div className="text-2xl font-bold text-bright-accent">
+                        {volumeSummary.total_reps}
+                      </div>
+                      <div className="text-sm text-muted-accent">Total Reps</div>
+                    </div>
+                    <div className="text-center p-4 bg-muted-main/30 rounded-lg border border-main/20">
+                      <div className="text-2xl font-bold text-bright-accent">
+                        {Math.round(volumeSummary.avg_volume_per_workout).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-accent">Avg Volume/Workout</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-48 flex items-center justify-center text-muted-accent">
+                  No training data for this period
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Personal Records Table */}
+          {prs.length > 0 && (
+            <div className="glass-surface rounded-xl p-6 opacity-0 animate-fade-in-up stagger-5">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-bright-accent flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-accent" />
+                  Personal Records
+                </h2>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-sm text-muted-accent border-b border-main/30">
+                      <th className="pb-3 font-medium">Exercise</th>
+                      <th className="pb-3 font-medium">Weight</th>
+                      <th className="pb-3 font-medium">Reps</th>
+                      <th className="pb-3 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prs.map((pr, index) => (
+                      <tr key={index} className="border-b border-main/20 hover:bg-main/10 transition-colors">
+                        <td className="py-4">
+                          <span className="font-medium text-bright-accent">{pr.exercise_name}</span>
+                        </td>
+                        <td className="py-4">
+                          <span className="text-accent font-semibold">
+                            {pr.weight} lbs
+                          </span>
+                        </td>
+                        <td className="py-4 text-muted-accent">
+                          {pr.reps} reps
+                        </td>
+                        <td className="py-4 text-muted-accent">
+                          {new Date(pr.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -226,28 +337,37 @@ function StatCard({
   value,
   change,
   changeType,
+  delay = 0,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   change: string;
   changeType: 'positive' | 'negative' | 'neutral';
+  delay?: number;
 }) {
   const changeColors = {
-    positive: 'text-main',
+    positive: 'text-accent',
     negative: 'text-red-400',
     neutral: 'text-muted-accent',
   };
 
   return (
-    <div className="glass-surface rounded-xl p-6 hover:border-main/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow-main group">
+    <div 
+      className="group card-interactive opacity-0 animate-fade-in-up"
+      style={{ animationDelay: `${0.1 + delay * 0.1}s` }}
+    >
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-main/20 rounded-lg flex items-center justify-center text-main group-hover:bg-main/30 group-hover:shadow-glow-main transition-all duration-300">
-          {icon}
+        <div className="w-10 h-10 bg-main/30 rounded-lg flex items-center justify-center text-accent group-hover:bg-main/50 group-hover:shadow-glow-main transition-all duration-300">
+          <div className="group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </div>
         </div>
-        <span className="text-muted-accent text-sm">{label}</span>
+        <span className="text-bright-accent/80 text-sm font-medium">{label}</span>
       </div>
-      <div className="text-3xl font-bold text-bright-accent mb-1 group-hover:text-accent transition-colors">{value}</div>
+      <div className="text-3xl font-bold text-bright-accent mb-1 group-hover:text-accent transition-colors">
+        {value}
+      </div>
       <div className={`text-sm ${changeColors[changeType]}`}>{change}</div>
     </div>
   );

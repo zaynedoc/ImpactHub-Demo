@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import { Sidebar } from '@/components/layout/Sidebar';
-import GradualBlur from '@/components/effects/GradualBlur';
 
 // Dynamic import to avoid SSR issues with WebGL
 const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
@@ -44,16 +43,6 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
-
-      {/* Gradual blur at bottom */}
-      <GradualBlur 
-        position="bottom"
-        strength={2}
-        height="6rem"
-        divCount={8}
-        exponential={true}
-        target="page"
-      />
     </div>
   );
 }

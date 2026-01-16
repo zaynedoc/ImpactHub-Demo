@@ -108,7 +108,7 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           <div className="flex items-center h-16 px-4 border-b border-main/30">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Dumbbell className="w-8 h-8 text-main" />
+              <Dumbbell className="w-8 h-8 text-bright-accent" />
               <span className="text-xl font-bold text-bright-accent">ImpactHub</span>
             </Link>
           </div>
