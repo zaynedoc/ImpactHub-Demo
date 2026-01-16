@@ -409,9 +409,31 @@ function BillingSettings() {
         <div className="flex items-center justify-between p-4 bg-main/20 border border-main/40 rounded-lg">
           <div>
             <h3 className="text-lg font-semibold text-bright-accent">Free Plan</h3>
-            <p className="text-sm text-muted-accent">20 workouts per month</p>
+            <p className="text-sm text-muted-accent">45 workouts per month</p>
           </div>
           <Button glow>Upgrade to Pro</Button>
+        </div>
+      </div>
+
+      <div className="glass-surface rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-bright-accent mb-4">Plan Features</h2>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
+            <span className="text-bright-accent">Workout Logging</span>
+            <span className="text-accent">45/month</span>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
+            <span className="text-bright-accent">Progress Tracking</span>
+            <span className="text-muted-accent">Pro Only</span>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
+            <span className="text-bright-accent">Programs</span>
+            <span className="text-muted-accent">Pro Only</span>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
+            <span className="text-bright-accent">Data Export</span>
+            <span className="text-accent">Included</span>
+          </div>
         </div>
       </div>
 

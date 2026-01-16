@@ -3,10 +3,17 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, Mail, Lock, Eye, EyeOff, User, ArrowRight, CheckCircle } from 'lucide-react';
+import { Dumbbell, Mail, Lock, Eye, EyeOff, User, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for DarkVeil background
+const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted-main" />,
+});
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -81,11 +88,19 @@ export default function SignupPage() {
   // Success state - show email verification message
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted-main">
-        {/* Background decoration */}
-        <div className="fixed inset-0 -z-10 overflow-hidden">
-          <div className="absolute top-1/4 -left-48 w-96 h-96 bg-main/20 rounded-full blur-3xl animate-pulse-glow" />
-          <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
+        {/* Aurora Background */}
+        <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
+          <DarkVeil 
+            hueShift={180} 
+            speed={0.2}
+            noiseIntensity={0.02}
+          />
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-main rounded-full blur-3xl animate-pulse-glow opacity-20" />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent rounded-full blur-3xl animate-pulse-glow opacity-15" style={{ animationDelay: '1.5s' }} />
+          </div>
+          <div className="absolute inset-0 bg-muted-main/60" />
         </div>
 
         <div className="w-full max-w-md">
@@ -110,17 +125,30 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted-main">
-      {/* Background decoration */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-main/20 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
+      {/* Aurora Background */}
+      <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
+        <DarkVeil 
+          hueShift={180} 
+          speed={0.2}
+          noiseIntensity={0.02}
+        />
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-2 h-2 bg-accent rounded-full animate-float opacity-60" />
+          <div className="absolute top-40 right-20 w-3 h-3 bg-main rounded-full animate-float-delayed opacity-40" />
+          <div className="absolute bottom-40 left-1/4 w-2 h-2 bg-bright-accent rounded-full animate-float-slow opacity-50" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-main rounded-full blur-3xl animate-pulse-glow opacity-20" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent rounded-full blur-3xl animate-pulse-glow opacity-15" style={{ animationDelay: '1.5s' }} />
+        </div>
+        <div className="absolute inset-0 bg-muted-main/60" />
       </div>
 
-      {/* Logo */}
+      {/* Logo with drop shadow */}
       <Link href="/" className="group flex items-center gap-2 mb-8">
-        <Dumbbell className="w-10 h-10 text-main group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
-        <span className="text-2xl font-bold text-bright-accent group-hover:text-gradient transition-all duration-300">
+        <div className="drop-shadow-[0_0_15px_rgba(17,100,102,0.5)]">
+          <Dumbbell className="w-10 h-10 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
+        </div>
+        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(17,100,102,0.5)] group-hover:text-accent transition-all duration-300">
           ImpactHub
         </span>
       </Link>
@@ -227,17 +255,18 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Submit button */}
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              isLoading={isLoading}
-              glow
-            >
-              Create account
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
+            {/* Submit button - centered */}
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                size="lg"
+                isLoading={isLoading}
+                glow
+              >
+                Create account
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </div>
 
             {/* Terms notice */}
             <p className="text-xs text-center text-muted-accent">
@@ -262,22 +291,20 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Login link */}
-          <Link href="/auth/login">
-            <Button variant="outline" className="w-full" size="lg">
-              Sign in instead
-            </Button>
-          </Link>
-        </div>
-
-        {/* Back to home */}
-        <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className="text-sm text-muted-accent hover:text-bright-accent transition-colors duration-200"
-          >
-            ? Back to home
-          </Link>
+          {/* Login link and Back to home - side by side */}
+          <div className="flex gap-3">
+            <Link href="/" className="flex-1">
+              <Button variant="ghost" className="w-full" size="lg">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to home
+              </Button>
+            </Link>
+            <Link href="/auth/login" className="flex-1">
+              <Button variant="outline" className="w-full" size="lg">
+                Sign in instead
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

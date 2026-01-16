@@ -14,6 +14,7 @@ import {
   X,
   User,
   Calendar,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -23,15 +24,16 @@ interface Profile {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  subscription_tier?: string | null;
 }
 
 const sidebarLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false },
-  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, exact: false },
-  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false },
-  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true, proOnly: false },
+  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false, proOnly: false },
+  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, exact: false, proOnly: false },
+  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false, proOnly: true },
+  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false, proOnly: true },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false, proOnly: false },
 ];
 
 export function Sidebar() {
@@ -41,6 +43,7 @@ export function Sidebar() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -51,11 +54,12 @@ export function Sidebar() {
       if (user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('username, full_name, avatar_url')
+          .select('username, full_name, avatar_url, subscription_tier')
           .eq('id', user.id)
           .single();
         
-        setProfile(profileData);
+        setProfile(profileData as Profile | null);
+        setIsPro((profileData as Profile | null)?.subscription_tier === 'pro');
       }
     }
 
@@ -65,6 +69,7 @@ export function Sidebar() {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
+        setIsPro(false);
       }
     });
 
@@ -77,6 +82,7 @@ export function Sidebar() {
     router.push('/');
     router.refresh();
   }
+
 
   const displayName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || '';
@@ -123,6 +129,21 @@ export function Sidebar() {
               const isActive = link.exact 
                 ? pathname === link.href
                 : pathname === link.href || pathname.startsWith(link.href + '/');
+              const isLocked = link.proOnly && !isPro;
+              
+              if (isLocked) {
+                return (
+                  <div
+                    key={link.href}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-muted-accent/50 cursor-not-allowed"
+                    title="Pro feature - Upgrade to access"
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1">{link.label}</span>
+                    <Lock className="w-4 h-4" />
+                  </div>
+                );
+              }
               
               return (
                 <Link

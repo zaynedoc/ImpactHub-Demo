@@ -12,9 +12,11 @@ import {
   Loader2,
   Dumbbell,
   Plus,
+  Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useTier } from '@/hooks/useTier';
 
 interface PR {
   exercise_name: string;
@@ -45,6 +47,7 @@ interface StreakInfo {
 }
 
 export default function ProgressPage() {
+  const { isPro, isLoading: tierLoading } = useTier();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
   const [prs, setPrs] = useState<PR[]>([]);
   const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
@@ -99,10 +102,49 @@ export default function ProgressPage() {
 
   const hasData = prs.length > 0 || volumeData.length > 0 || (streakInfo && streakInfo.current_streak > 0);
 
-  if (isLoading) {
+  if (tierLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
+
+  // Show pro gate for free users
+  if (!isPro) {
+    return (
+      <div className="space-y-6">
+        <div className="opacity-0 animate-fade-in-up">
+          <h1 className="text-3xl font-bold text-bright-accent">Progress</h1>
+          <p className="text-muted-accent mt-1">Track your fitness journey over time</p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center min-h-[400px] opacity-0 animate-fade-in-up stagger-2">
+          <div className="glass-surface rounded-2xl p-8 max-w-md text-center">
+            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Crown className="w-8 h-8 text-accent" />
+            </div>
+            <h2 className="text-2xl font-bold text-bright-accent mb-3">
+              This is a Pro Feature!
+            </h2>
+            <p className="text-muted-accent mb-6">
+              Upgrade to Pro to access detailed progress tracking, volume analytics, personal records history, and workout streaks.
+            </p>
+            <div className="space-y-3">
+              <Link href="/dashboard/settings">
+                <Button glow className="w-full">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade to Pro
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="ghost" className="w-full">
+                  Back to Dashboard
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
