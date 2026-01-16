@@ -46,14 +46,8 @@ export default function HomePage() {
               className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-muted-main/80 text-bright-accent font-semibold rounded-xl transition-all duration-300 border border-main/30 hover:border-main/60 hover:bg-main/20 hover:-translate-y-1"
             >
               See Features
-              <ArrowRight className="w-5 h-5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-          </div>
-
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce-subtle">
-            <div className="w-6 h-10 border-2 border-main/50 rounded-full flex justify-center pt-2">
-              <div className="w-1 h-2 bg-main rounded-full animate-bounce" />
-            </div>
           </div>
         </div>
       </section>

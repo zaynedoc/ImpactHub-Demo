@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import { Menu, X, Dumbbell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, Dumbbell, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -17,6 +18,26 @@ const navLinks = [
 export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+      setIsLoading(false);
+    }
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-surface animate-fade-in-down">
@@ -24,8 +45,8 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo with hover animation */}
           <Link href="/" className="group flex items-center gap-2">
-            <Dumbbell className="w-8 h-8 text-main group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
-            <span className="text-xl font-bold text-bright-accent group-hover:text-gradient transition-all duration-300">
+            <Dumbbell className="w-8 h-8 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
+            <span className="text-xl font-bold text-white group-hover:text-accent transition-all duration-300">
               ImpactHub
             </span>
           </Link>
@@ -50,18 +71,32 @@ export function Navbar() {
 
           {/* CTA buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="text-sm font-medium text-bright-accent/80 hover:text-accent transition-all duration-300 hover:-translate-y-0.5"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="group px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg transition-all duration-300 shadow-glow-main hover:shadow-glow-accent hover:-translate-y-0.5"
-            >
-              Get Started
-            </Link>
+            {!isLoading && (
+              isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="group inline-flex items-center gap-2 px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg transition-all duration-300 shadow-glow-main hover:shadow-glow-accent hover:-translate-y-0.5"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="text-sm font-medium text-bright-accent/80 hover:text-accent transition-all duration-300 hover:-translate-y-0.5"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="group px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg transition-all duration-300 shadow-glow-main hover:shadow-glow-accent hover:-translate-y-0.5"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -106,20 +141,35 @@ export function Navbar() {
                 </Link>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-main/30">
-                <Link
-                  href="/auth/login"
-                  className="text-sm font-medium text-bright-accent/80 hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg hover:bg-main/80 transition-all shadow-glow-main text-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
+                {!isLoading && (
+                  isLoggedIn ? (
+                    <Link
+                      href="/dashboard"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg hover:bg-main/80 transition-all shadow-glow-main text-center justify-center"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+                  ) : (
+                    <>
+                      <Link
+                        href="/auth/login"
+                        className="text-sm font-medium text-bright-accent/80 hover:text-accent transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Log in
+                      </Link>
+                      <Link
+                        href="/auth/signup"
+                        className="px-4 py-2 bg-main text-bright-accent text-sm font-semibold rounded-lg hover:bg-main/80 transition-all shadow-glow-main text-center"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Get Started
+                      </Link>
+                    </>
+                  )
+                )}
               </div>
             </div>
           </div>

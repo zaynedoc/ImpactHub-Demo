@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   User,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -27,6 +28,7 @@ interface Profile {
 const sidebarLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false },
+  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, exact: false },
   { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false },
   { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false },
@@ -107,9 +109,11 @@ export function Sidebar() {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center h-16 px-4 border-b border-main/30">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Dumbbell className="w-8 h-8 text-bright-accent" />
-              <span className="text-xl font-bold text-bright-accent">ImpactHub</span>
+            <Link href="/" className="group flex items-center gap-2">
+              <Dumbbell className="w-8 h-8 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
+              <span className="text-xl font-bold text-white group-hover:text-accent transition-all duration-300">
+                ImpactHub
+              </span>
             </Link>
           </div>
 

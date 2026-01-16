@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
   Dumbbell,
@@ -42,12 +42,9 @@ interface Workout {
   workout_exercises: WorkoutExercise[];
 }
 
-export default function WorkoutDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function WorkoutDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { toast, showToast, hideToast } = useToastLocal();
   const [workout, setWorkout] = useState<Workout | null>(null);
@@ -55,7 +52,9 @@ export default function WorkoutDetailPage({
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    fetchWorkout();
+    if (id) {
+      fetchWorkout();
+    }
   }, [id]);
 
   const fetchWorkout = async () => {

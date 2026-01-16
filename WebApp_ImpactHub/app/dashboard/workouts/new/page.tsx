@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2, GripVertical, Save } from 'lucide-react';
@@ -32,6 +32,11 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   );
   const [notes, setNotes] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragNodeRef = useRef<HTMLDivElement | null>(null);
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -96,6 +101,58 @@ const [isSubmitting, setIsSubmitting] = useState(false);
           : e
       )
     );
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    dragNodeRef.current = e.target as HTMLDivElement;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+    
+    // Add a slight delay to allow the drag image to be captured
+    setTimeout(() => {
+      if (dragNodeRef.current) {
+        dragNodeRef.current.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleDragEnd = () => {
+    if (dragNodeRef.current) {
+      dragNodeRef.current.style.opacity = '1';
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    dragNodeRef.current = null;
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      handleDragEnd();
+      return;
+    }
+
+    const newExercises = [...exercises];
+    const [draggedItem] = newExercises.splice(draggedIndex, 1);
+    newExercises.splice(dropIndex, 0, draggedItem);
+    
+    setExercises(newExercises);
+    handleDragEnd();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -273,10 +330,27 @@ const [isSubmitting, setIsSubmitting] = useState(false);
               {exercises.map((exercise, exerciseIndex) => (
                 <div
                   key={exercise.id}
-                  className="bg-muted-main/50 border border-main/30 rounded-xl p-4"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, exerciseIndex)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleDragOver(e, exerciseIndex)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, exerciseIndex)}
+                  className={`bg-muted-main/50 border rounded-xl p-4 transition-all duration-200 ${
+                    draggedIndex === exerciseIndex 
+                      ? 'opacity-50 border-main/50' 
+                      : dragOverIndex === exerciseIndex 
+                        ? 'border-accent border-2 shadow-glow-accent' 
+                        : 'border-main/30'
+                  }`}
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <GripVertical className="w-5 h-5 text-muted-accent cursor-move" />
+                    <div 
+                      className="cursor-grab active:cursor-grabbing p-1 hover:bg-main/20 rounded transition-colors"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="w-5 h-5 text-muted-accent" />
+                    </div>
                     <span className="text-sm text-muted-accent font-medium">
                       #{exerciseIndex + 1}
                     </span>

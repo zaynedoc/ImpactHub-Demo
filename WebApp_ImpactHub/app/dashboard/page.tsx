@@ -272,7 +272,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-bright-accent">This Week</h2>
           <Link
-            href="/dashboard/workouts"
+            href="/dashboard/calendar"
             className="group text-accent hover:text-bright-accent text-sm flex items-center gap-1 transition-colors font-medium"
           >
             Full Calendar

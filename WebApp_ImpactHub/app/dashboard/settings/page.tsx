@@ -286,14 +286,14 @@ function NotificationToggle({
 }
 
 function SecuritySettings() {
-const [currentPassword, setCurrentPassword] = useState('');
 const [newPassword, setNewPassword] = useState('');
 const [confirmPassword, setConfirmPassword] = useState('');
 const [isChangingPassword, setIsChangingPassword] = useState(false);
 const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 const supabase = createClient();
 
-const handlePasswordChange = async () => {
+const handlePasswordChange = async (e: React.FormEvent) => {
+  e.preventDefault();
   setPasswordMessage(null);
 
   // Validation
@@ -320,15 +320,16 @@ const handlePasswordChange = async () => {
     });
 
     if (error) {
+      console.error('Password update error:', error);
       setPasswordMessage({ type: 'error', text: error.message });
     } else {
       setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     }
   } catch (error) {
-    setPasswordMessage({ type: 'error', text: 'Failed to update password' });
+    console.error('Password update exception:', error);
+    setPasswordMessage({ type: 'error', text: 'Failed to update password. Please try again.' });
   } finally {
     setIsChangingPassword(false);
   }
@@ -336,7 +337,7 @@ const handlePasswordChange = async () => {
 
 return (
   <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
-    <div className="glass-surface rounded-xl p-6">
+    <form onSubmit={handlePasswordChange} className="glass-surface rounded-xl p-6">
       <h2 className="text-xl font-semibold text-bright-accent mb-6">Change Password</h2>
       <div className="space-y-4 max-w-md">
         <Input 
@@ -353,14 +354,14 @@ return (
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirm new password"
         />
-          
+            
         {passwordMessage && (
           <div className={`p-3 rounded-lg ${passwordMessage.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
             {passwordMessage.text}
           </div>
         )}
-          
-        <Button glow onClick={handlePasswordChange} disabled={isChangingPassword}>
+            
+        <Button type="submit" glow disabled={isChangingPassword}>
           {isChangingPassword ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -371,7 +372,7 @@ return (
           )}
         </Button>
       </div>
-    </div>
+    </form>
 
       <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Two-Factor Authentication</h2>
