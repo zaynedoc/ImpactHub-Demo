@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="WebApp_ImpactHub/WebApp_ImpactHub.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+</Solution>
