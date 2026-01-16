@@ -16,9 +16,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-muted-main">
+    <div className="min-h-screen relative">
       {/* Background DarkVeil effect - slightly different hue from home for differentiation */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
+      <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
         <DarkVeil 
           hueShift={140} 
           speed={0.25}

@@ -12,21 +12,19 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const sidebarLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell },
-  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen },
-  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false },
+  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false },
+  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -47,9 +45,8 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'fixed top-0 left-0 h-full z-40 transition-all duration-300',
+          'fixed top-0 left-0 h-full w-64 z-40 transition-all duration-300',
           'bg-muted-main/70 backdrop-blur-xl border-r border-main/40',
-          collapsed ? 'w-20' : 'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
         style={{
@@ -57,34 +54,21 @@ export function Sidebar() {
         }}
       >
         <div className="flex flex-col h-full">
-          <div className={cn(
-            'flex items-center h-16 px-4 border-b border-main/30',
-            collapsed ? 'justify-center' : 'justify-between'
-          )}>
-            {!collapsed && (
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <Dumbbell className="w-8 h-8 text-main" />
-                <span className="text-xl font-bold text-bright-accent">ImpactHub</span>
-              </Link>
-            )}
-            {collapsed && (
+          <div className="flex items-center h-16 px-4 border-b border-main/30">
+            <Link href="/dashboard" className="flex items-center gap-2">
               <Dumbbell className="w-8 h-8 text-main" />
-            )}
-            <button
-              className="hidden lg:block text-muted-accent hover:text-accent transition-colors"
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              <ChevronLeft className={cn(
-                'w-5 h-5 transition-transform',
-                collapsed && 'rotate-180'
-              )} />
-            </button>
+              <span className="text-xl font-bold text-bright-accent">ImpactHub</span>
+            </Link>
           </div>
 
           <nav className="flex-1 py-6 px-3 space-y-1">
             {sidebarLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
+              // For exact match (Dashboard), only match exact path
+              // For other links, match if path starts with the link href
+              const isActive = link.exact 
+                ? pathname === link.href
+                : pathname === link.href || pathname.startsWith(link.href + '/');
               
               return (
                 <Link
@@ -94,14 +78,12 @@ export function Sidebar() {
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all',
                     isActive
                       ? 'bg-main text-bright-accent shadow-glow-main'
-                      : 'text-muted-accent hover:text-accent hover:bg-main/20',
-                    collapsed && 'justify-center'
+                      : 'text-muted-accent hover:text-accent hover:bg-main/20'
                   )}
                   onClick={() => setMobileOpen(false)}
-                  title={collapsed ? link.label : undefined}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  {!collapsed && <span>{link.label}</span>}
+                  <span>{link.label}</span>
                 </Link>
               );
             })}
@@ -109,14 +91,10 @@ export function Sidebar() {
 
           <div className="p-3 border-t border-main/30">
             <button
-              className={cn(
-                'flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-muted-accent hover:text-accent hover:bg-main/20 transition-all',
-                collapsed && 'justify-center'
-              )}
-              title={collapsed ? 'Log out' : undefined}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg font-medium text-muted-accent hover:text-accent hover:bg-main/20 transition-all"
             >
               <LogOut className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>Log out</span>}
+              <span>Log out</span>
             </button>
           </div>
         </div>
