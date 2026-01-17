@@ -12,7 +12,7 @@ import {
   Loader2,
   Dumbbell,
   Plus,
-  Crown,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -47,7 +47,7 @@ interface StreakInfo {
 }
 
 export default function ProgressPage() {
-  const { isPro, isLoading: tierLoading } = useTier();
+  const { progressUnlocked, totalWorkouts, workoutsUntilProgressUnlock, isLoading: tierLoading } = useTier();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
   const [prs, setPrs] = useState<PR[]>([]);
   const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
@@ -64,8 +64,13 @@ export default function ProgressPage() {
   };
 
   useEffect(() => {
-    fetchProgressData();
-  }, [timeRange]);
+    // Only fetch progress data if unlocked
+    if (progressUnlocked) {
+      fetchProgressData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [timeRange, progressUnlocked]);
 
   const fetchProgressData = async () => {
     setIsLoading(true);
@@ -110,8 +115,10 @@ export default function ProgressPage() {
     );
   }
 
-  // Show pro gate for free users
-  if (!isPro) {
+  // Show workout-based unlock gate (not a paywall!)
+  if (!progressUnlocked) {
+    const progressPercent = Math.min(100, (totalWorkouts / 10) * 100);
+    
     return (
       <div className="space-y-6">
         <div className="opacity-0 animate-fade-in-up">
@@ -121,20 +128,40 @@ export default function ProgressPage() {
 
         <div className="flex flex-col items-center justify-center min-h-[400px] opacity-0 animate-fade-in-up stagger-2">
           <div className="glass-surface rounded-2xl p-8 max-w-md text-center">
-            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Crown className="w-8 h-8 text-accent" />
+            <div className="w-16 h-16 bg-main/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-8 h-8 text-main" />
             </div>
             <h2 className="text-2xl font-bold text-bright-accent mb-3">
-              This is a Pro Feature!
+              Unlock Progress Tracking
             </h2>
             <p className="text-muted-accent mb-6">
-              Upgrade to Pro to access detailed progress tracking, volume analytics, personal records history, and workout streaks.
+              Log 10 workouts to unlock detailed progress tracking, volume analytics, personal records history, and workout streaks.
             </p>
+            
+            {/* Progress meter */}
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-accent">Your progress</span>
+                <span className="text-accent font-medium">{totalWorkouts} / 10 workouts</span>
+              </div>
+              <div className="h-3 bg-muted-main/60 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-main to-accent rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-accent mt-2">
+                {workoutsUntilProgressUnlock > 0 
+                  ? `${workoutsUntilProgressUnlock} more workout${workoutsUntilProgressUnlock === 1 ? '' : 's'} to unlock!`
+                  : 'Almost there!'}
+              </p>
+            </div>
+
             <div className="space-y-3">
-              <Link href="/dashboard/settings">
+              <Link href="/dashboard/workouts/new">
                 <Button glow className="w-full">
-                  <Crown className="w-4 h-4 mr-2" />
-                  Upgrade to Pro
+                  <Dumbbell className="w-4 h-4 mr-2" />
+                  Log a Workout
                 </Button>
               </Link>
               <Link href="/dashboard">

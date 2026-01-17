@@ -42,6 +42,26 @@ interface VolumeSummary {
   workout_count: number;
 }
 
+// Helper to parse date string (YYYY-MM-DD) without timezone issues
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+}
+
+// Helper to get today's date at midnight (local time)
+function getTodayLocal(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+// Helper to get start of week (Monday) for a given date
+function getStartOfWeekLocal(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Adjust so Monday is start
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+}
+
 export default function DashboardPage() {
   const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([]);
   const [recentPRs, setRecentPRs] = useState<PR[]>([]);
@@ -49,6 +69,7 @@ export default function DashboardPage() {
   const [volumeSummary, setVolumeSummary] = useState<VolumeSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [workoutDays, setWorkoutDays] = useState<Set<number>>(new Set());
+  const [workoutCountThisWeek, setWorkoutCountThisWeek] = useState(0);
 
   useEffect(() => {
     fetchDashboardData();
@@ -57,27 +78,43 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       // Fetch recent workouts
-      const workoutsRes = await fetch('/api/workouts?pageSize=3');
+      const workoutsRes = await fetch('/api/workouts?pageSize=50');
       const workoutsData = await workoutsRes.json();
       if (workoutsData.success) {
-        setRecentWorkouts(workoutsData.data || []);
+        // Get today's date (local time, no timezone issues)
+        const today = getTodayLocal();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        // Filter out future workouts for display (only show past/today)
+        const pastAndTodayWorkouts = (workoutsData.data || []).filter((w: Workout) => {
+          return w.workout_date <= todayStr;
+        });
+        
+        setRecentWorkouts(pastAndTodayWorkouts.slice(0, 3));
         
         // Calculate which days this week have workouts
-        const today = new Date();
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+        const startOfWeek = getStartOfWeekLocal(today);
+        const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
         
         const daysWithWorkouts = new Set<number>();
-        (workoutsData.data || []).forEach((w: Workout) => {
-          const workoutDate = new Date(w.workout_date);
-          if (workoutDate >= startOfWeek) {
+        let weekWorkoutCount = 0;
+        
+        pastAndTodayWorkouts.forEach((w: Workout) => {
+          // Check if workout is in current week (Mon-Sun)
+          if (w.workout_date >= startOfWeekStr && w.workout_date <= todayStr) {
+            weekWorkoutCount++;
+            
+            // Parse the date for day-of-week calculation
+            const workoutDate = parseLocalDate(w.workout_date);
             const dayOfWeek = workoutDate.getDay();
             // Convert Sunday (0) to 6, Monday (1) to 0, etc.
             const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
             daysWithWorkouts.add(adjustedDay);
           }
         });
+        
         setWorkoutDays(daysWithWorkouts);
+        setWorkoutCountThisWeek(weekWorkoutCount);
       }
 
       // Fetch PRs
@@ -107,8 +144,8 @@ export default function DashboardPage() {
     }
   };
 
-  // Calculate this week's workouts count
-  const workoutsThisWeek = workoutDays.size;
+  // Use actual workout count (not unique days)
+  const workoutsThisWeek = workoutCountThisWeek;
 
   if (isLoading) {
     return (

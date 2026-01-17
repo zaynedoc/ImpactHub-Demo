@@ -168,6 +168,15 @@ export default function WorkoutDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/dashboard/workouts/${id}/edit`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-accent hover:text-bright-accent hover:bg-main/20"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             size="sm"

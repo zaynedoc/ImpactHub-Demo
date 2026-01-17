@@ -20,6 +20,13 @@ export const RATE_LIMITS = {
   api: { windowMs: 60 * 1000, maxRequests: 60 },  // 60 requests per minute
   workoutCreate: { windowMs: 60 * 1000, maxRequests: 10 },  // 10 workouts per minute
   payment: { windowMs: 60 * 1000, maxRequests: 5 },  // 5 payment attempts per minute
+  // AI plan generation: 60 per month (enforced separately via database counter)
+  aiPlanGeneration: { windowMs: 60 * 1000, maxRequests: 5 },  // 5 requests per minute (burst protection)
+} as const;
+
+// AI usage limits (monthly)
+export const AI_LIMITS = {
+  plansPerMonth: 60,  // 60 AI plan generations per month
 } as const;
 
 export function checkRateLimit(

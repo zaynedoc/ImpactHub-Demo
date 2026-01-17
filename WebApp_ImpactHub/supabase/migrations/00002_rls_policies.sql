@@ -351,7 +351,14 @@ CREATE POLICY "Users can view own audit logs"
     FOR SELECT
     USING (auth.uid() = user_id);
 
--- Only service role can insert audit logs (no user INSERT policy)
+-- Authenticated users can insert audit logs for themselves or system events
+CREATE POLICY "Users can insert own audit logs"
+    ON public.audit_logs
+    FOR INSERT
+    WITH CHECK (
+        -- Allow insert if user_id matches current user OR user_id is null (system events)
+        auth.uid() = user_id OR user_id IS NULL
+    );
 
 -- ============================================================================
 -- USER SETTINGS POLICIES
@@ -362,6 +369,7 @@ CREATE POLICY "Users can view own settings"
     ON public.user_settings
     FOR SELECT
     USING (auth.uid() = user_id);
+
 
 -- Users can create their own settings
 CREATE POLICY "Users can create own settings"

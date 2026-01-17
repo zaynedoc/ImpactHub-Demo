@@ -78,9 +78,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+
     // Process volume by date
     const volumeMap = new Map<string, VolumeStats>();
     const typedWorkouts = (workouts || []) as unknown as WorkoutWithExercises[];
+    let totalWorkoutCount = 0; // Track actual workout count, not unique days
 
     for (const workout of typedWorkouts) {
       const date = workout.workout_date;
@@ -92,6 +94,7 @@ export async function GET(request: NextRequest) {
       };
 
       const exercises = workout.workout_exercises;
+      let workoutHasSets = false;
 
       for (const exercise of exercises) {
         // Filter by exercise name if provided
@@ -103,7 +106,12 @@ export async function GET(request: NextRequest) {
           existing.total_volume += set.weight * set.reps;
           existing.total_sets += 1;
           existing.total_reps += set.reps;
+          workoutHasSets = true;
         }
+      }
+
+      if (workoutHasSets) {
+        totalWorkoutCount++;
       }
 
       volumeMap.set(date, existing);
@@ -118,7 +126,7 @@ export async function GET(request: NextRequest) {
     const totalVolume = volumeStats.reduce((sum, stat) => sum + stat.total_volume, 0);
     const totalSets = volumeStats.reduce((sum, stat) => sum + stat.total_sets, 0);
     const totalReps = volumeStats.reduce((sum, stat) => sum + stat.total_reps, 0);
-    const avgVolumePerWorkout = volumeStats.length > 0 ? totalVolume / volumeStats.length : 0;
+    const avgVolumePerWorkout = totalWorkoutCount > 0 ? totalVolume / totalWorkoutCount : 0;
 
     return NextResponse.json<ApiResponse>({
       success: true,
@@ -128,7 +136,7 @@ export async function GET(request: NextRequest) {
           total_volume: totalVolume,
           total_sets: totalSets,
           total_reps: totalReps,
-          workout_count: volumeStats.length,
+          workout_count: totalWorkoutCount, // Use actual workout count, not unique days
           avg_volume_per_workout: Math.round(avgVolumePerWorkout),
           period_days: days,
         },

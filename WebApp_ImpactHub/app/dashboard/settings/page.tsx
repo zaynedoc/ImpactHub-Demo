@@ -452,10 +452,17 @@ function BillingSettings() {
 }
 
 function DataSettings() {
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+const [isExporting, setIsExporting] = useState(false);
+const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+// Delete account state
+const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [deletePassword, setDeletePassword] = useState('');
+const [deleteConfirmText, setDeleteConfirmText] = useState('');
+const [isDeleting, setIsDeleting] = useState(false);
+const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const exportData = async (format: 'json' | 'csv') => {
+const exportData = async (format: 'json' | 'csv') => {
     setIsExporting(true);
     setExportMessage(null);
 
@@ -546,6 +553,46 @@ function DataSettings() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm');
+      return;
+    }
+
+    if (!deletePassword) {
+      setDeleteError('Please enter your password');
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setDeleteError(result.error || 'Failed to delete account');
+        setIsDeleting(false);
+        return;
+      }
+
+      // Sign out and redirect to home
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/?deleted=true';
+    } catch (error) {
+      console.error('Delete account error:', error);
+      setDeleteError('An unexpected error occurred');
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
       <div className="glass-surface rounded-xl p-6">
@@ -588,16 +635,106 @@ function DataSettings() {
         </div>
       </div>
 
-      <div className="glass-surface rounded-xl border-red-500/30 p-6">
-        <h2 className="text-xl font-semibold text-bright-accent mb-4">Danger Zone</h2>
+      <div className="glass-surface rounded-xl border border-red-500/30 p-6">
+        <h2 className="text-xl font-semibold text-red-400 mb-4">Danger Zone</h2>
         <p className="text-muted-accent mb-4">
-          Once you delete your account, there is no going back. Please be certain.
+          Once you delete your account, there is no going back. All your data including workouts, progress, and settings will be permanently removed.
         </p>
-        <Button variant="danger">
+        <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
           <Trash2 className="w-4 h-4 mr-2" />
           Delete Account
         </Button>
       </div>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setDeletePassword('');
+              setDeleteConfirmText('');
+              setDeleteError(null);
+            }}
+          />
+          <div className="relative glass-surface rounded-2xl p-6 max-w-md w-full border border-red-500/30 animate-fade-in-up">
+            <h3 className="text-xl font-bold text-red-400 mb-4">Delete Account</h3>
+            <p className="text-muted-accent mb-6">
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm text-muted-accent mb-2">
+                  Enter your password to confirm
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Your password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  disabled={isDeleting}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-muted-accent mb-2">
+                  Type <span className="text-red-400 font-mono font-bold">DELETE</span> to confirm
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Type DELETE"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  disabled={isDeleting}
+                  className={deleteConfirmText === 'DELETE' ? 'border-red-500' : ''}
+                />
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 mb-4">
+                <p className="text-sm text-red-400">{deleteError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                  setDeleteConfirmText('');
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || deleteConfirmText !== 'DELETE' || !deletePassword}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Forever
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

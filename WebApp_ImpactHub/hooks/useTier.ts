@@ -12,15 +12,24 @@ interface TierInfo {
   workoutsThisMonth: number;
   workoutLimit: number;
   canLogWorkout: boolean;
+  // Progress unlock (earned after 10 total workouts)
+  totalWorkouts: number;
+  progressUnlocked: boolean;
+  workoutsUntilProgressUnlock: number;
 }
 
-const FREE_WORKOUT_LIMIT = 45;
+// Free tier: 60 workouts per month (generous limit)
+const FREE_WORKOUT_LIMIT = 60;
 const PRO_WORKOUT_LIMIT = Infinity;
+
+// Progress tab unlocks after 10 total workouts (lifetime)
+const PROGRESS_UNLOCK_THRESHOLD = 10;
 
 export function useTier(): TierInfo {
   const [tier, setTier] = useState<UserTier>('free');
   const [isLoading, setIsLoading] = useState(true);
   const [workoutsThisMonth, setWorkoutsThisMonth] = useState(0);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
 
   useEffect(() => {
     async function checkTier() {
@@ -36,7 +45,6 @@ export function useTier(): TierInfo {
 
         // Check user's subscription tier from profile
         // For now, all users are on free tier
-        // In the future, this would check a subscription table
         const { data: profile } = await supabase
           .from('profiles')
           .select('subscription_tier')
@@ -52,14 +60,22 @@ export function useTier(): TierInfo {
         const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-        const { count } = await supabase
+        const { count: monthlyCount } = await supabase
           .from('workouts')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .gte('workout_date', firstOfMonth)
           .lte('workout_date', lastOfMonth);
 
-        setWorkoutsThisMonth(count || 0);
+        setWorkoutsThisMonth(monthlyCount || 0);
+
+        // Count total workouts (all time) for progress unlock
+        const { count: totalCount } = await supabase
+          .from('workouts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        setTotalWorkouts(totalCount || 0);
       } catch (error) {
         console.error('Error checking tier:', error);
       } finally {
@@ -73,6 +89,10 @@ export function useTier(): TierInfo {
   const isPro = tier === 'pro';
   const workoutLimit = isPro ? PRO_WORKOUT_LIMIT : FREE_WORKOUT_LIMIT;
   const canLogWorkout = workoutsThisMonth < workoutLimit;
+  
+  // Progress is unlocked after 10 total workouts (or if Pro)
+  const progressUnlocked = isPro || totalWorkouts >= PROGRESS_UNLOCK_THRESHOLD;
+  const workoutsUntilProgressUnlock = Math.max(0, PROGRESS_UNLOCK_THRESHOLD - totalWorkouts);
 
   return {
     tier,
@@ -81,17 +101,23 @@ export function useTier(): TierInfo {
     workoutsThisMonth,
     workoutLimit,
     canLogWorkout,
+    totalWorkouts,
+    progressUnlocked,
+    workoutsUntilProgressUnlock,
   };
 }
 
-// List of features that require pro tier
-export const PRO_FEATURES = {
-  programs: true,
-  progress: true,
-  advancedAnalytics: true,
-  unlimitedWorkouts: true,
+// Features that are always free (no Pro gate)
+// Programs: FREE for everyone
+// Progress: Unlocks after 10 workouts
+// Workouts: 60/month for free users
+export const FEATURE_ACCESS = {
+  programs: 'free',           // Always free
+  progress: 'earned',         // Earned after 10 workouts
+  advancedAnalytics: 'pro',   // Pro only (future)
+  unlimitedWorkouts: 'pro',   // Pro gets unlimited
 } as const;
 
-export function requiresPro(feature: keyof typeof PRO_FEATURES): boolean {
-  return PRO_FEATURES[feature] === true;
+export function getFeatureAccess(feature: keyof typeof FEATURE_ACCESS): 'free' | 'earned' | 'pro' {
+  return FEATURE_ACCESS[feature];
 }

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useTier } from '@/hooks/useTier';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Profile {
@@ -27,13 +28,22 @@ interface Profile {
   subscription_tier?: string | null;
 }
 
-const sidebarLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true, proOnly: false },
-  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false, proOnly: false },
-  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, exact: false, proOnly: false },
-  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false, proOnly: true },
-  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false, proOnly: true },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false, proOnly: false },
+// Type for sidebar link with optional earned unlock
+type SidebarLink = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+  requiresEarned?: boolean; // For features that unlock after X workouts
+};
+
+const sidebarLinks: SidebarLink[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/workouts', label: 'Workouts', icon: Dumbbell, exact: false },
+  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, exact: false },
+  { href: '/dashboard/programs', label: 'Programs', icon: BookOpen, exact: false },
+  { href: '/dashboard/progress', label: 'Progress', icon: TrendingUp, exact: false, requiresEarned: true },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false },
 ];
 
 export function Sidebar() {
@@ -43,7 +53,7 @@ export function Sidebar() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isPro, setIsPro] = useState(false);
+  const { progressUnlocked, totalWorkouts, isLoading: tierLoading } = useTier();
   const supabase = createClient();
 
   useEffect(() => {
@@ -59,7 +69,6 @@ export function Sidebar() {
           .single();
         
         setProfile(profileData as Profile | null);
-        setIsPro((profileData as Profile | null)?.subscription_tier === 'pro');
       }
     }
 
@@ -69,7 +78,6 @@ export function Sidebar() {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
-        setIsPro(false);
       }
     });
 
@@ -129,22 +137,13 @@ export function Sidebar() {
               const isActive = link.exact 
                 ? pathname === link.href
                 : pathname === link.href || pathname.startsWith(link.href + '/');
-              const isLocked = link.proOnly && !isPro;
               
-              if (isLocked) {
-                return (
-                  <div
-                    key={link.href}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-muted-accent/50 cursor-not-allowed"
-                    title="Pro feature - Upgrade to access"
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="flex-1">{link.label}</span>
-                    <Lock className="w-4 h-4" />
-                  </div>
-                );
-              }
+              // Check if this link requires earned unlock (Progress tab)
+              // Don't show lock while tier data is still loading
+              const isLocked = link.requiresEarned && !tierLoading && !progressUnlocked;
               
+              // For locked items, show a clickable link but with lock icon
+              // Users can still click to see the unlock progress screen
               return (
                 <Link
                   key={link.href}
@@ -153,12 +152,16 @@ export function Sidebar() {
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all',
                     isActive
                       ? 'bg-main text-bright-accent shadow-glow-main'
-                      : 'text-muted-accent hover:text-accent hover:bg-main/20'
+                      : isLocked
+                        ? 'text-muted-accent/70 hover:text-muted-accent hover:bg-main/10'
+                        : 'text-muted-accent hover:text-accent hover:bg-main/20'
                   )}
                   onClick={() => setMobileOpen(false)}
+                  title={isLocked ? `Log ${10 - totalWorkouts} more workouts to unlock` : undefined}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span>{link.label}</span>
+                  <span className="flex-1">{link.label}</span>
+                  {isLocked && <Lock className="w-4 h-4 text-muted-accent/50" />}
                 </Link>
               );
             })}

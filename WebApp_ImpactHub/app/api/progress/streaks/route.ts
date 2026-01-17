@@ -35,12 +35,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch all completed/in_progress workout dates
+    // Get today's date to exclude future workouts
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Fetch all completed/in_progress workout dates (excluding future dates)
     const { data: workouts, error } = await supabase
       .from('workouts')
       .select('workout_date')
       .eq('user_id', user.id)
       .in('status', ['completed', 'in_progress'])
+      .lte('workout_date', todayStr) // Exclude future workouts
       .order('workout_date', { ascending: false });
 
     if (error) {
@@ -70,32 +75,41 @@ export async function GET(request: NextRequest) {
     const uniqueDates = [...new Set(typedWorkouts.map(w => w.workout_date))].sort().reverse();
     const lastWorkoutDate = uniqueDates[0];
 
+    // Helper to parse date string (YYYY-MM-DD) without timezone issues
+    const parseLocalDate = (dateStr: string): Date => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    // Helper to get difference in days between two date strings
+    const getDayDiff = (date1: string, date2: string): number => {
+      const d1 = parseLocalDate(date1);
+      const d2 = parseLocalDate(date2);
+      return Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    // Get today's date string in local time
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
     // Calculate current streak
-    // A streak counts consecutive days or days with only 1 day gap (for rest days)
+    // A streak counts CONSECUTIVE days only (no gaps allowed)
     let currentStreak = 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
-    // Check if the last workout was within the valid streak window (today or yesterday)
-    const lastWorkoutDateObj = new Date(lastWorkoutDate);
-    lastWorkoutDateObj.setHours(0, 0, 0, 0);
-    
-    const daysSinceLastWorkout = Math.floor((today.getTime() - lastWorkoutDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceLastWorkout = getDayDiff(todayLocalStr, lastWorkoutDate);
     
     // If the last workout was more than 1 day ago, current streak is 0
+    // daysSinceLastWorkout: 0 = today, 1 = yesterday, 2+ = streak broken
     if (daysSinceLastWorkout > 1) {
       currentStreak = 0;
     } else {
-      // Count the current streak
+      // Count the current streak (consecutive days only)
       currentStreak = 1;
       for (let i = 1; i < uniqueDates.length; i++) {
-        const currentDate = new Date(uniqueDates[i - 1]);
-        const previousDate = new Date(uniqueDates[i]);
+        const dayDiff = getDayDiff(uniqueDates[i - 1], uniqueDates[i]);
         
-        const dayDiff = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        // Allow 1 or 2 day gaps (accounts for rest days)
-        if (dayDiff <= 2) {
+        // Only count consecutive days (exactly 1 day apart)
+        if (dayDiff === 1) {
           currentStreak++;
         } else {
           break;
@@ -103,7 +117,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calculate longest streak
+    // Calculate longest streak (consecutive days only)
     let longestStreak = 0;
     let tempStreak = 1;
     
@@ -111,13 +125,10 @@ export async function GET(request: NextRequest) {
     const sortedDates = [...uniqueDates].sort();
     
     for (let i = 1; i < sortedDates.length; i++) {
-      const currentDate = new Date(sortedDates[i]);
-      const previousDate = new Date(sortedDates[i - 1]);
+      const dayDiff = getDayDiff(sortedDates[i], sortedDates[i - 1]);
       
-      const dayDiff = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Allow 1 or 2 day gaps
-      if (dayDiff <= 2) {
+      // Only count consecutive days
+      if (dayDiff === 1) {
         tempStreak++;
       } else {
         longestStreak = Math.max(longestStreak, tempStreak);
@@ -129,14 +140,16 @@ export async function GET(request: NextRequest) {
     // Make sure longest streak is at least as big as current streak
     longestStreak = Math.max(longestStreak, currentStreak);
 
-    // Additional stats
+    // Additional stats (already filtered to exclude future workouts from query)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const workoutsLast30Days = uniqueDates.filter(date => new Date(date) >= thirtyDaysAgo).length;
+    const thirtyDaysAgoStr = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysAgo.getDate()).padStart(2, '0')}`;
+    const workoutsLast30Days = uniqueDates.filter(date => date >= thirtyDaysAgoStr).length;
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const workoutsLast7Days = uniqueDates.filter(date => new Date(date) >= sevenDaysAgo).length;
+    const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
+    const workoutsLast7Days = uniqueDates.filter(date => date >= sevenDaysAgoStr).length;
 
     return NextResponse.json<ApiResponse>({
       success: true,

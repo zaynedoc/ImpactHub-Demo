@@ -75,15 +75,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Filter by user and process PRs
+    // Filter by user and process PRs (excluding future workouts)
     const prMap = new Map<string, PersonalRecordResponse>();
     const typedPrData = (prData || []) as unknown as SetWithExercise[];
+    const today = new Date().toISOString().split('T')[0];
     
     for (const set of typedPrData) {
       const exerciseData = set.workout_exercise;
 
       // Filter by user
       if (exerciseData.workout.user_id !== user.id) {
+        continue;
+      }
+
+      // Exclude future workouts from PR calculations
+      if (exerciseData.workout.workout_date > today) {
         continue;
       }
 

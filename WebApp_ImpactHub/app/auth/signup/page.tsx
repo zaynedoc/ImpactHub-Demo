@@ -291,16 +291,16 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Login link and Back to home - side by side */}
-          <div className="flex gap-3">
-            <Link href="/" className="flex-1">
-              <Button variant="ghost" className="w-full" size="lg">
+          {/* Login link and Back to home - centered */}
+          <div className="flex justify-center gap-3">
+            <Link href="/">
+              <Button variant="ghost" size="lg">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to home
               </Button>
             </Link>
-            <Link href="/auth/login" className="flex-1">
-              <Button variant="outline" className="w-full" size="lg">
+            <Link href="/auth/login">
+              <Button variant="outline" size="lg">
                 Sign in instead
               </Button>
             </Link>
