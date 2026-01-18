@@ -132,6 +132,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check monthly workout limit based on subscription
+    const monthKey = (() => {
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    })();
+
+    // Check subscription tier
+    let workoutLimit = 45; // Free tier default
+    try {
+      const { data: subData } = await supabase
+        .from('subscriptions' as 'profiles')
+        .select('status')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (subData) {
+        const status = (subData as { status: string }).status;
+        if (status === 'active' || status === 'trialing') {
+          workoutLimit = 90; // Pro tier
+        }
+      }
+    } catch {
+      // No subscription, use free tier limit
+    }
+
+    // Get current usage
+    let workoutsUsed = 0;
+    try {
+      const { data: usageData } = await supabase
+        .from('usage_limits' as 'profiles')
+        .select('workouts_logged')
+        .eq('user_id', user.id)
+        .eq('month_key', monthKey)
+        .single();
+      
+      if (usageData) {
+        workoutsUsed = (usageData as { workouts_logged: number }).workouts_logged || 0;
+      }
+    } catch {
+      // No usage record yet
+    }
+
+    if (workoutsUsed >= workoutLimit) {
+      return NextResponse.json<ApiResponse>(
+        { 
+          success: false, 
+          error: `Monthly workout limit reached (${workoutsUsed}/${workoutLimit}). ${workoutLimit === 45 ? 'Upgrade to Pro for 90 workouts per month!' : 'Please wait until next month.'}` 
+        },
+        { status: 429 }
+      );
+    }
+
     // Parse and validate body
     const body: CreateWorkoutRequest = await request.json();
 

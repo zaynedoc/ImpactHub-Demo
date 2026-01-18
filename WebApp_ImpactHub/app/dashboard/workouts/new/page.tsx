@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash2, GripVertical, Save, History, X, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Save, History, X, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Toast, useToastLocal } from '@/components/ui/Toast';
@@ -26,34 +26,135 @@ interface PreviousExercise {
   sets: { weight: number; reps: number; rir: number | null }[];
 }
 
+// Wrapper component for Suspense boundary
 export default function NewWorkoutPage() {
-  const router = useRouter();
-  const { toast, showToast, hideToast } = useToastLocal();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [title, setTitle] = useState('');
-  const [workoutDate, setWorkoutDate] = useState(
-    new Date().toISOString().split('T')[0]
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    }>
+      <NewWorkoutContent />
+    </Suspense>
   );
-  const [notes, setNotes] = useState('');
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+}
+
+function NewWorkoutContent() {
+const router = useRouter();
+const searchParams = useSearchParams();
+const scheduledId = searchParams.get('scheduled');
   
-  // Drag and drop state
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const dragNodeRef = useRef<HTMLDivElement | null>(null);
+const { toast, showToast, hideToast } = useToastLocal();
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [isLoadingScheduled, setIsLoadingScheduled] = useState(!!scheduledId);
+  
+const [title, setTitle] = useState('');
+const [workoutDate, setWorkoutDate] = useState(
+  new Date().toISOString().split('T')[0]
+);
+const [notes, setNotes] = useState('');
+const [exercises, setExercises] = useState<Exercise[]>([]);
+  
+// Track the scheduled workout we're starting from
+const [scheduledWorkoutId, setScheduledWorkoutId] = useState<string | null>(scheduledId);
+  
+// Drag and drop state
+const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+const dragNodeRef = useRef<HTMLDivElement | null>(null);
 
-  // Previous exercises modal state
-  const [showPreviousExercises, setShowPreviousExercises] = useState(false);
-  const [previousExercises, setPreviousExercises] = useState<PreviousExercise[]>([]);
-  const [exerciseSearch, setExerciseSearch] = useState('');
-  const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
+// Previous exercises modal state
+const [showPreviousExercises, setShowPreviousExercises] = useState(false);
+const [previousExercises, setPreviousExercises] = useState<PreviousExercise[]>([]);
+const [exerciseSearch, setExerciseSearch] = useState('');
+const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
 
-  useEffect(() => {
-    if (showPreviousExercises) {
-      fetchPreviousExercises();
+// Load scheduled workout data if starting from calendar
+useEffect(() => {
+  if (scheduledId) {
+    loadScheduledWorkout(scheduledId);
+  }
+}, [scheduledId]);
+
+const loadScheduledWorkout = async (id: string) => {
+  setIsLoadingScheduled(true);
+  try {
+    const res = await fetch(`/api/scheduled-workouts/${id}`);
+    const data = await res.json();
+      
+    if (data.success && data.data) {
+      const scheduled = data.data;
+        
+      // Set title (remove week info for cleaner title)
+      const cleanTitle = scheduled.title.replace(/\s*\(Week \d+\)$/, '');
+      setTitle(cleanTitle);
+        
+      // Set date
+      setWorkoutDate(scheduled.workout_date);
+        
+      // Parse and set exercises from scheduled_exercises
+      if (scheduled.scheduled_exercises) {
+        let exerciseData = scheduled.scheduled_exercises;
+          
+        // Handle string or object format
+        if (typeof exerciseData === 'string') {
+          try {
+            exerciseData = JSON.parse(exerciseData);
+          } catch {
+            exerciseData = [];
+          }
+        }
+          
+        interface ScheduledExercise {
+          name: string;
+          sets: number | string;
+          reps: string;
+          notes?: string;
+        }
+          
+        const loadedExercises: Exercise[] = exerciseData.map((ex: ScheduledExercise) => {
+          // Parse sets count - could be "3" or 3
+          const setCount = typeof ex.sets === 'string' ? parseInt(ex.sets) || 3 : ex.sets || 3;
+            
+          // Create empty sets for the exercise
+          const sets: ExerciseSet[] = [];
+          for (let i = 0; i < setCount; i++) {
+            sets.push({
+              id: crypto.randomUUID(),
+              weight: '',
+              reps: '',
+              rir: '',
+            });
+          }
+            
+          return {
+            id: crypto.randomUUID(),
+            name: ex.name,
+            sets,
+          };
+        });
+          
+        setExercises(loadedExercises);
+      }
+        
+      // Extract notes from the scheduled workout
+      if (scheduled.notes) {
+        setNotes(scheduled.notes);
+      }
     }
-  }, [showPreviousExercises]);
+  } catch (err) {
+    console.error('Failed to load scheduled workout:', err);
+    showToast('Failed to load scheduled workout', 'error');
+  } finally {
+    setIsLoadingScheduled(false);
+  }
+};
+
+useEffect(() => {
+  if (showPreviousExercises) {
+    fetchPreviousExercises();
+  }
+}, [showPreviousExercises]);
 
   const fetchPreviousExercises = async () => {
     setIsLoadingPrevious(true);
@@ -296,6 +397,22 @@ export default function NewWorkoutPage() {
         }
       }
 
+      // If this was from a scheduled workout, mark it as completed
+      if (scheduledWorkoutId) {
+        try {
+          await fetch(`/api/scheduled-workouts/${scheduledWorkoutId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: 'completed',
+              completed_workout_id: workoutId,
+            }),
+          });
+        } catch (err) {
+          console.error('Failed to update scheduled workout:', err);
+        }
+      }
+
       showToast('Workout created successfully!', 'success');
       setTimeout(() => {
         router.push('/dashboard/workouts');
@@ -311,17 +428,28 @@ export default function NewWorkoutPage() {
     }
   };
 
+  // Show loading state when loading scheduled workout
+  if (isLoadingScheduled) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4 opacity-0 animate-fade-in-up">
-        <Link href="/dashboard/workouts">
+        <Link href={scheduledWorkoutId ? '/dashboard/calendar' : '/dashboard/workouts'}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-bright-accent">New Workout</h1>
+          <h1 className="text-3xl font-bold text-bright-accent">
+            {scheduledWorkoutId ? 'Start Scheduled Workout' : 'New Workout'}
+          </h1>
           <p className="text-muted-accent mt-1">Log your training session</p>
         </div>
       </div>

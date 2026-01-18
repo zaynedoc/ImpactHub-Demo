@@ -76,7 +76,6 @@ function ProfileSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Get profile data
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: profile } = await (supabase as any)
           .from('profiles')
@@ -109,7 +108,6 @@ function ProfileSettings() {
         return;
       }
 
-      // Update profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from('profiles')
@@ -286,93 +284,92 @@ function NotificationToggle({
 }
 
 function SecuritySettings() {
-const [newPassword, setNewPassword] = useState('');
-const [confirmPassword, setConfirmPassword] = useState('');
-const [isChangingPassword, setIsChangingPassword] = useState(false);
-const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-const supabase = createClient();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const supabase = createClient();
 
-const handlePasswordChange = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setPasswordMessage(null);
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage(null);
 
-  // Validation
-  if (!newPassword || !confirmPassword) {
-    setPasswordMessage({ type: 'error', text: 'Please fill in all password fields' });
-    return;
-  }
-
-  if (newPassword.length < 6) {
-    setPasswordMessage({ type: 'error', text: 'New password must be at least 6 characters' });
-    return;
-  }
-
-  if (newPassword !== confirmPassword) {
-    setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
-    return;
-  }
-
-  setIsChangingPassword(true);
-
-  try {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-
-    if (error) {
-      console.error('Password update error:', error);
-      setPasswordMessage({ type: 'error', text: error.message });
-    } else {
-      setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
-      setNewPassword('');
-      setConfirmPassword('');
+    if (!newPassword || !confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Please fill in all password fields' });
+      return;
     }
-  } catch (error) {
-    console.error('Password update exception:', error);
-    setPasswordMessage({ type: 'error', text: 'Failed to update password. Please try again.' });
-  } finally {
-    setIsChangingPassword(false);
-  }
-};
 
-return (
-  <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
-    <form onSubmit={handlePasswordChange} className="glass-surface rounded-xl p-6">
-      <h2 className="text-xl font-semibold text-bright-accent mb-6">Change Password</h2>
-      <div className="space-y-4 max-w-md">
-        <Input 
-          label="New Password" 
-          type="password" 
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Enter new password"
-        />
-        <Input 
-          label="Confirm New Password" 
-          type="password" 
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm new password"
-        />
-            
-        {passwordMessage && (
-          <div className={`p-3 rounded-lg ${passwordMessage.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
-            {passwordMessage.text}
-          </div>
-        )}
-            
-        <Button type="submit" glow disabled={isChangingPassword}>
-          {isChangingPassword ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Updating...
-            </>
-          ) : (
-            'Update Password'
+    if (newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'New password must be at least 6 characters' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        console.error('Password update error:', error);
+        setPasswordMessage({ type: 'error', text: error.message });
+      } else {
+        setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (error) {
+      console.error('Password update exception:', error);
+      setPasswordMessage({ type: 'error', text: 'Failed to update password. Please try again.' });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
+      <form onSubmit={handlePasswordChange} className="glass-surface rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-bright-accent mb-6">Change Password</h2>
+        <div className="space-y-4 max-w-md">
+          <Input 
+            label="New Password" 
+            type="password" 
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+          />
+          <Input 
+            label="Confirm New Password" 
+            type="password" 
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+          />
+          
+          {passwordMessage && (
+            <div className={`p-3 rounded-lg ${passwordMessage.type === 'success' ? 'bg-main/20 border border-main/40 text-main' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+              {passwordMessage.text}
+            </div>
           )}
-        </Button>
-      </div>
-    </form>
+          
+          <Button type="submit" glow disabled={isChangingPassword}>
+            {isChangingPassword ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              'Update Password'
+            )}
+          </Button>
+        </div>
+      </form>
 
       <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Two-Factor Authentication</h2>
@@ -385,7 +382,7 @@ return (
       <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Active Sessions</h2>
         <p className="text-muted-accent mb-4">
-          You're currently logged in on these devices.
+          You are currently logged in on these devices.
         </p>
         <div className="space-y-3">
           <div className="flex items-center justify-between p-3 bg-main/10 rounded-lg border border-main/30">
@@ -402,16 +399,207 @@ return (
 }
 
 function BillingSettings() {
+  const [subscription, setSubscription] = useState<{
+    tier: 'free' | 'pro';
+    status: string;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    workoutsUsedThisMonth: number;
+    workoutsRemaining: number;
+    aiTokensUsedThisMonth: number;
+    aiTokensRemaining: number;
+    limits: { workoutsPerMonth: number; aiTokensPerMonth: number };
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    fetchSubscription();
+    
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      setMessage({ type: 'success', text: 'Successfully upgraded to Pro!' });
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing');
+    }
+    if (params.get('canceled') === 'true') {
+      setMessage({ type: 'error', text: 'Checkout was canceled.' });
+      window.history.replaceState({}, '', '/dashboard/settings?tab=billing');
+    }
+  }, []);
+
+  const fetchSubscription = async () => {
+    try {
+      const res = await fetch('/api/billing/subscription');
+      const data = await res.json();
+      if (data.success) {
+        setSubscription(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch subscription:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    setIsUpgrading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/billing/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl;
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to start checkout' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to start checkout' });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your Pro subscription? You will keep access until the end of your billing period.')) {
+      return;
+    }
+    
+    setIsCanceling(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/billing/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Subscription will be canceled at the end of your billing period.' });
+        fetchSubscription();
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to cancel subscription' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to cancel subscription' });
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setIsCanceling(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/billing/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reactivate' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Subscription reactivated!' });
+        fetchSubscription();
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to reactivate' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to reactivate' });
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 text-main animate-spin" />
+      </div>
+    );
+  }
+
+  const isPro = subscription?.tier === 'pro';
+
   return (
     <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
+      {message && (
+        <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Current Plan</h2>
         <div className="flex items-center justify-between p-4 bg-main/20 border border-main/40 rounded-lg">
           <div>
-            <h3 className="text-lg font-semibold text-bright-accent">Free Plan</h3>
-            <p className="text-sm text-muted-accent">45 workouts per month</p>
+            <h3 className="text-lg font-semibold text-bright-accent">
+              {isPro ? 'Pro Plan' : 'Free Plan'}
+            </h3>
+            <p className="text-sm text-muted-accent">
+              {subscription?.limits.workoutsPerMonth} workouts per month
+              {isPro && ` - ${subscription?.limits.aiTokensPerMonth} AI generations per month`}
+            </p>
+            {isPro && subscription?.currentPeriodEnd && (
+              <p className="text-sm text-muted-accent mt-1">
+                {subscription.cancelAtPeriodEnd 
+                  ? `Access until ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                  : `Renews on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                }
+              </p>
+            )}
           </div>
-          <Button glow>Upgrade to Pro</Button>
+          {isPro ? (
+            subscription?.cancelAtPeriodEnd ? (
+              <Button variant="outline" onClick={handleReactivate} isLoading={isCanceling}>
+                Reactivate
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={handleCancelSubscription} isLoading={isCanceling}>
+                Cancel Plan
+              </Button>
+            )
+          ) : (
+            <Button glow onClick={handleUpgrade} isLoading={isUpgrading}>
+              Upgrade to Pro - $4.99/mo
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="glass-surface rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-bright-accent mb-4">Usage This Month</h2>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-accent">Workouts</span>
+              <span className="text-bright-accent">
+                {subscription?.workoutsUsedThisMonth || 0} / {subscription?.limits.workoutsPerMonth || 45}
+              </span>
+            </div>
+            <div className="h-2 bg-muted-main rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-main rounded-full transition-all"
+                style={{ width: `${Math.min(100, ((subscription?.workoutsUsedThisMonth || 0) / (subscription?.limits.workoutsPerMonth || 45)) * 100)}%` }}
+              />
+            </div>
+          </div>
+          {isPro && (
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-accent">AI Generations</span>
+                <span className="text-bright-accent">
+                  {subscription?.aiTokensUsedThisMonth || 0} / {subscription?.limits.aiTokensPerMonth || 3}
+                </span>
+              </div>
+              <div className="h-2 bg-muted-main rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-accent rounded-full transition-all"
+                  style={{ width: `${Math.min(100, ((subscription?.aiTokensUsedThisMonth || 0) / (subscription?.limits.aiTokensPerMonth || 3)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -420,15 +608,15 @@ function BillingSettings() {
         <div className="space-y-3">
           <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
             <span className="text-bright-accent">Workout Logging</span>
-            <span className="text-accent">45/month</span>
+            <span className="text-accent">{isPro ? '90/month' : '45/month'}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
             <span className="text-bright-accent">Progress Tracking</span>
-            <span className="text-muted-accent">Pro Only</span>
+            <span className={isPro ? 'text-accent' : 'text-muted-accent'}>{isPro ? 'Included' : '10 workouts to unlock'}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
-            <span className="text-bright-accent">Programs</span>
-            <span className="text-muted-accent">Pro Only</span>
+            <span className="text-bright-accent">AI Workout Programs</span>
+            <span className={isPro ? 'text-accent' : 'text-muted-accent'}>{isPro ? '3/month' : 'Pro Only'}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-muted-main/30 rounded-lg border border-main/20">
             <span className="text-bright-accent">Data Export</span>
@@ -436,38 +624,24 @@ function BillingSettings() {
           </div>
         </div>
       </div>
-
-      <div className="glass-surface rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-bright-accent mb-4">Payment Method</h2>
-        <p className="text-muted-accent mb-4">No payment method on file.</p>
-        <Button variant="outline">Add Payment Method</Button>
-      </div>
-
-      <div className="glass-surface rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-bright-accent mb-4">Billing History</h2>
-        <p className="text-muted-accent">No billing history available.</p>
-      </div>
     </div>
   );
 }
 
 function DataSettings() {
-const [isExporting, setIsExporting] = useState(false);
-const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  
-// Delete account state
-const [showDeleteModal, setShowDeleteModal] = useState(false);
-const [deletePassword, setDeletePassword] = useState('');
-const [deleteConfirmText, setDeleteConfirmText] = useState('');
-const [isDeleting, setIsDeleting] = useState(false);
-const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-const exportData = async (format: 'json' | 'csv') => {
+  const exportData = async (format: 'json' | 'csv') => {
     setIsExporting(true);
     setExportMessage(null);
 
     try {
-      // Fetch all workouts with exercises and sets
       const response = await fetch('/api/workouts?pageSize=1000');
       const result = await response.json();
 
@@ -492,7 +666,6 @@ const exportData = async (format: 'json' | 'csv') => {
         filename = `impacthub-workouts-${new Date().toISOString().split('T')[0]}.json`;
         mimeType = 'application/json';
       } else {
-        // CSV format - flatten the data
         const csvRows: string[] = [];
         csvRows.push('Workout Title,Date,Exercise,Set Number,Weight (lbs),Reps,RIR');
 
@@ -519,7 +692,7 @@ const exportData = async (format: 'json' | 'csv') => {
                 });
               } else {
                 csvRows.push(
-                  `"${workout.title}","${workout.workout_date}","${exercise.exercise_name}",,,, `
+                  `"${workout.title}","${workout.workout_date}","${exercise.exercise_name}",,,,`
                 );
               }
             });
@@ -533,7 +706,6 @@ const exportData = async (format: 'json' | 'csv') => {
         mimeType = 'text/csv';
       }
 
-      // Create and download file
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -582,7 +754,6 @@ const exportData = async (format: 'json' | 'csv') => {
         return;
       }
 
-      // Sign out and redirect to home
       const supabase = createClient();
       await supabase.auth.signOut();
       window.location.href = '/?deleted=true';
@@ -646,7 +817,6 @@ const exportData = async (format: 'json' | 'csv') => {
         </Button>
       </div>
 
-      {/* Delete Account Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
@@ -717,7 +887,7 @@ const exportData = async (format: 'json' | 'csv') => {
                 variant="danger"
                 className="flex-1"
                 onClick={handleDeleteAccount}
-                disabled={isDeleting || deleteConfirmText !== 'DELETE' || !deletePassword}
+                disabled={isDeleting || deleteConfirmText !== 'DELETE'}
               >
                 {isDeleting ? (
                   <>

@@ -3,15 +3,19 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import type { ApiResponse } from '@/types/api';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // Threshold for earning progress unlock
 const PROGRESS_UNLOCK_THRESHOLD = 10;
 
 interface EntitlementResponse {
   progressUnlocked: boolean;
-  unlockReason: 'earned' | 'purchase' | 'admin' | null;
+  unlockReason: 'earned' | 'purchase' | 'admin' | 'pro' | null;
   totalWorkouts: number;
   workoutsUntilUnlock: number;
   unlockedAt: string | null;
+  isPro: boolean;
 }
 
 /**
@@ -41,19 +45,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Type for entitlement data (table may not exist yet in types)
+    // Type for entitlement data
     interface EntitlementData {
       progress_unlocked: boolean;
       unlocked_reason: string | null;
       unlocked_at: string | null;
     }
 
+    // Check subscription status first
+    let isPro = false;
+    try {
+      const { data: subData } = await supabase
+        .from('subscriptions' as 'profiles')
+        .select('status')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (subData) {
+        const status = (subData as { status: string }).status;
+        isPro = status === 'active' || status === 'trialing';
+      }
+    } catch {
+      // No subscription record
+    }
+
     // Fetch entitlements record (if exists)
-    // Note: Table might not exist in DB types yet, using type assertion
     let entitlement: EntitlementData | null = null;
     try {
       const { data, error } = await supabase
-        .from('entitlements' as 'profiles') // Type workaround until types are regenerated
+        .from('entitlements' as 'profiles')
         .select('progress_unlocked, unlocked_reason, unlocked_at')
         .eq('user_id', user.id)
         .single();
@@ -62,7 +82,7 @@ export async function GET(request: NextRequest) {
         entitlement = data as unknown as EntitlementData;
       }
     } catch {
-      // Table might not exist yet, continue with null
+      // Table might not exist yet
     }
 
     // Count total workouts for the user
@@ -74,14 +94,17 @@ export async function GET(request: NextRequest) {
     const workoutCount = totalWorkouts || 0;
     
     // Progress is unlocked if:
-    // 1. Entitlement record shows progress_unlocked = true, OR
-    // 2. User has 10+ total workouts (compute at runtime)
+    // 1. User is a Pro subscriber, OR
+    // 2. Entitlement record shows progress_unlocked = true, OR
+    // 3. User has 10+ total workouts (compute at runtime)
     const earnedByWorkouts = workoutCount >= PROGRESS_UNLOCK_THRESHOLD;
-    const progressUnlocked = entitlement?.progress_unlocked === true || earnedByWorkouts;
+    const progressUnlocked = isPro || entitlement?.progress_unlocked === true || earnedByWorkouts;
     
     // Determine unlock reason
-    let unlockReason: 'earned' | 'purchase' | 'admin' | null = null;
-    if (entitlement?.unlocked_reason) {
+    let unlockReason: 'earned' | 'purchase' | 'admin' | 'pro' | null = null;
+    if (isPro) {
+      unlockReason = 'pro';
+    } else if (entitlement?.unlocked_reason) {
       unlockReason = entitlement.unlocked_reason as 'earned' | 'purchase' | 'admin';
     } else if (earnedByWorkouts) {
       unlockReason = 'earned';
@@ -91,8 +114,9 @@ export async function GET(request: NextRequest) {
       progressUnlocked,
       unlockReason,
       totalWorkouts: workoutCount,
-      workoutsUntilUnlock: Math.max(0, PROGRESS_UNLOCK_THRESHOLD - workoutCount),
+      workoutsUntilUnlock: progressUnlocked ? 0 : Math.max(0, PROGRESS_UNLOCK_THRESHOLD - workoutCount),
       unlockedAt: entitlement?.unlocked_at || null,
+      isPro,
     };
 
     return NextResponse.json<ApiResponse<EntitlementResponse>>({

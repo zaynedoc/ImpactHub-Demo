@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import type { ApiResponse, VolumeStats } from '@/types/api';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // Type for workout query result
 interface WorkoutWithExercises {
   id: string;

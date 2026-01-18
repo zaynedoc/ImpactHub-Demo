@@ -11,7 +11,7 @@ const config: Config = {
       colors: {
         // Primary color palette
         'muted-main': '#2C3531',
-        'main': '#116466',
+        'main': '#1a8f91',  // Brightened from #116466
         'muted-accent': '#D9B08C',
         'accent': '#FFCB9A',
         'bright-accent': '#D1E8E2',
@@ -19,7 +19,7 @@ const config: Config = {
         background: '#2C3531',
         foreground: '#D1E8E2',
         primary: {
-          DEFAULT: '#116466',
+          DEFAULT: '#1a8f91',  // Brightened to match main
           hover: '#0d5052',
           muted: '#2C3531',
         },

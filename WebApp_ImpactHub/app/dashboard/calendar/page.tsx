@@ -9,6 +9,10 @@ import {
   Plus,
   Loader2,
   Calendar as CalendarIcon,
+  Play,
+  Clock,
+  Check,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -20,27 +24,39 @@ interface Workout {
   workout_exercises?: { id: string }[];
 }
 
+interface ScheduledWorkout {
+  id: string;
+  title: string;
+  workout_date: string;
+  status: 'planned' | 'in_progress' | 'completed' | 'skipped';
+  notes: string | null;
+  scheduled_exercises: string | null;
+  program_id: string | null;
+}
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorkouts();
+    fetchScheduledWorkouts();
   }, [currentDate]);
 
   const fetchWorkouts = async () => {
     try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
-      
       const response = await fetch('/api/workouts?pageSize=100');
       const result = await response.json();
 
       if (result.success) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+        const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        
         const monthWorkouts = (result.data || []).filter((w: Workout) => 
           w.workout_date >= firstDay && w.workout_date <= lastDay
         );
@@ -48,6 +64,24 @@ export default function CalendarPage() {
       }
     } catch (error) {
       console.error('Error fetching workouts:', error);
+    }
+  };
+
+  const fetchScheduledWorkouts = async () => {
+    try {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+      const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      
+      const response = await fetch(`/api/scheduled-workouts?start=${firstDay}&end=${lastDay}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setScheduledWorkouts(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduled workouts:', error);
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +104,11 @@ export default function CalendarPage() {
   const getWorkoutsForDay = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return workouts.filter(w => w.workout_date === dateStr);
+  };
+
+  const getScheduledForDay = (day: number) => {
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return scheduledWorkouts.filter(w => w.workout_date === dateStr && w.status !== 'completed');
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -101,6 +140,30 @@ export default function CalendarPage() {
   const selectedDateWorkouts = selectedDate 
     ? workouts.filter(w => w.workout_date === selectedDate)
     : [];
+
+  const selectedDateScheduled = selectedDate
+    ? scheduledWorkouts.filter(w => w.workout_date === selectedDate && w.status !== 'completed')
+    : [];
+
+  const handleStartScheduled = async (scheduledId: string) => {
+    // Navigate to new workout page with pre-filled data from scheduled workout
+    window.location.href = `/dashboard/workouts/new?scheduled=${scheduledId}`;
+  };
+
+  const handleDeleteScheduled = async (scheduledId: string) => {
+    if (!confirm('Delete this scheduled workout?')) return;
+    
+    try {
+      const res = await fetch(`/api/scheduled-workouts/${scheduledId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setScheduledWorkouts(prev => prev.filter(s => s.id !== scheduledId));
+      }
+    } catch (err) {
+      console.error('Failed to delete scheduled workout:', err);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -161,7 +224,9 @@ export default function CalendarPage() {
             {Array.from({ length: daysInMonth }).map((_, index) => {
               const day = index + 1;
               const dayWorkouts = getWorkoutsForDay(day);
+              const dayScheduled = getScheduledForDay(day);
               const hasWorkouts = dayWorkouts.length > 0;
+              const hasScheduled = dayScheduled.length > 0;
               const dateStr = formatDateForLink(day);
               const isSelected = selectedDate === dateStr;
               
@@ -174,22 +239,30 @@ export default function CalendarPage() {
                       ? 'bg-accent/30 text-accent border border-accent/50'
                       : hasWorkouts
                       ? 'bg-main/30 text-bright-accent hover:bg-main/50'
+                      : hasScheduled
+                      ? 'bg-accent/10 text-bright-accent hover:bg-accent/20 border border-dashed border-accent/30'
                       : 'hover:bg-muted-main/50 text-muted-accent hover:text-bright-accent'
                   } ${isSelected ? 'ring-2 ring-accent shadow-glow-accent' : ''}`}
                 >
                   <span className={`text-sm ${isToday(day) ? 'font-bold' : ''}`}>
                     {day}
                   </span>
-                  {hasWorkouts && (
-                    <div className="flex gap-0.5">
-                      {dayWorkouts.slice(0, 3).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-1.5 h-1.5 rounded-full bg-main group-hover:bg-accent transition-colors"
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex gap-0.5">
+                    {/* Completed workout dots */}
+                    {dayWorkouts.slice(0, 2).map((_, i) => (
+                      <div
+                        key={`w-${i}`}
+                        className="w-1.5 h-1.5 rounded-full bg-main group-hover:bg-accent transition-colors"
+                      />
+                    ))}
+                    {/* Scheduled workout dots (hollow) */}
+                    {dayScheduled.slice(0, 2).map((_, i) => (
+                      <div
+                        key={`s-${i}`}
+                        className="w-1.5 h-1.5 rounded-full border border-accent bg-transparent"
+                      />
+                    ))}
+                  </div>
                 </button>
               );
             })}
@@ -211,43 +284,103 @@ export default function CalendarPage() {
           </div>
 
           {selectedDate ? (
-            selectedDateWorkouts.length > 0 ? (
-              <div className="space-y-3">
-                {selectedDateWorkouts.map((workout) => (
-                  <Link
-                    key={workout.id}
-                    href={`/dashboard/workouts/${workout.id}`}
-                    className="group block p-4 bg-muted-main/40 rounded-lg border border-main/35 hover:border-accent/50 hover:bg-main/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-main"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-main/30 rounded-lg flex items-center justify-center group-hover:bg-main/50 transition-colors">
-                        <Dumbbell className="w-5 h-5 text-accent" />
+            <div className="space-y-4">
+              {/* Scheduled Workouts */}
+              {selectedDateScheduled.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-accent flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Scheduled
+                  </h3>
+                  {selectedDateScheduled.map((scheduled) => (
+                    <div
+                      key={scheduled.id}
+                      className="p-4 bg-accent/10 rounded-lg border border-dashed border-accent/30"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-bright-accent">{scheduled.title}</h4>
+                          {scheduled.notes && (
+                            <p className="text-xs text-muted-accent mt-1 line-clamp-2">{scheduled.notes}</p>
+                          )}
+                        </div>
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleDeleteScheduled(scheduled.id)}
+                          className="p-1.5 text-muted-accent hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                          title="Delete this workout"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-bright-accent group-hover:text-accent transition-colors">
-                          {workout.title}
-                        </h3>
-                        <p className="text-sm text-muted-accent">
-                          {workout.workout_exercises?.length || 0} exercises
-                          {workout.duration_minutes && ` - ${workout.duration_minutes} min`}
-                        </p>
-                      </div>
+                      <Button 
+                        size="sm" 
+                        glow 
+                        className="w-full"
+                        onClick={() => handleStartScheduled(scheduled.id)}
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Start Workout
+                      </Button>
+                      {scheduled.program_id && (
+                        <Link 
+                          href={`/dashboard/programs/${scheduled.program_id}`}
+                          className="block text-xs text-main hover:text-accent mt-2 transition-colors"
+                        >
+                          View Program ?
+                        </Link>
+                      )}
                     </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Completed Workouts */}
+              {selectedDateWorkouts.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-accent flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    Completed
+                  </h3>
+                  {selectedDateWorkouts.map((workout) => (
+                    <Link
+                      key={workout.id}
+                      href={`/dashboard/workouts/${workout.id}`}
+                      className="group block p-4 bg-muted-main/40 rounded-lg border border-main/35 hover:border-accent/50 hover:bg-main/15 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-main"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-main/30 rounded-lg flex items-center justify-center group-hover:bg-main/50 transition-colors">
+                          <Dumbbell className="w-5 h-5 text-accent" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-bright-accent group-hover:text-accent transition-colors">
+                            {workout.title}
+                          </h3>
+                          <p className="text-sm text-muted-accent">
+                            {workout.workout_exercises?.length || 0} exercises
+                            {workout.duration_minutes && ` - ${workout.duration_minutes} min`}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {selectedDateWorkouts.length === 0 && selectedDateScheduled.length === 0 && (
+                <div className="text-center py-8">
+                  <Dumbbell className="w-12 h-12 text-main/40 mx-auto mb-4" />
+                  <p className="text-muted-accent mb-4">No workouts on this day</p>
+                  <Link href="/dashboard/workouts/new">
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Log Workout
+                    </Button>
                   </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Dumbbell className="w-12 h-12 text-main/40 mx-auto mb-4" />
-                <p className="text-muted-accent mb-4">No workouts on this day</p>
-                <Link href="/dashboard/workouts/new">
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Log Workout
-                  </Button>
-                </Link>
-              </div>
-            )
+                </div>
+              )}
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-accent">
               <CalendarIcon className="w-12 h-12 text-main/40 mx-auto mb-4" />
