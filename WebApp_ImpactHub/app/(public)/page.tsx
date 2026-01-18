@@ -118,30 +118,6 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
-
-      <footer className="py-12 border-t border-main/30">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-muted-accent text-sm">
-              2024 ImpactHub
-            </div>
-            <div className="flex gap-6 text-sm">
-              <Link href="/about" className="link-underline text-muted-accent hover:text-accent transition-colors">
-                About
-              </Link>
-              <Link href="/features" className="link-underline text-muted-accent hover:text-accent transition-colors">
-                Features
-              </Link>
-              <Link href="/pricing" className="link-underline text-muted-accent hover:text-accent transition-colors">
-                Pricing
-              </Link>
-              <Link href="/contact" className="link-underline text-muted-accent hover:text-accent transition-colors">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

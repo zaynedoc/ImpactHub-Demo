@@ -129,6 +129,8 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
+
+      <div className="pb-32" />
     </div>
   );
 }

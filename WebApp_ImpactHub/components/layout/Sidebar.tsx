@@ -25,7 +25,6 @@ interface Profile {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  subscription_tier?: string | null;
 }
 
 // Type for sidebar link with optional earned unlock
@@ -64,7 +63,7 @@ export function Sidebar() {
       if (user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('username, full_name, avatar_url, subscription_tier')
+          .select('username, full_name, avatar_url')
           .eq('id', user.id)
           .single();
         

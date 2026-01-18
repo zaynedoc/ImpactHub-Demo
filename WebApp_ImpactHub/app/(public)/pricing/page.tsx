@@ -17,65 +17,41 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <PricingCard
               name="Free"
               price="$0"
               period="forever"
-              description="Perfect for getting started with workout tracking."
+              description="Everything you need to start tracking your fitness journey."
               features={[
-                { text: 'Log up to 20 workouts/month', included: true },
-                { text: 'Basic progress charts', included: true },
+                { text: 'Log up to 45 workouts/month', included: true },
                 { text: 'Personal record tracking', included: true },
+                { text: 'Workout calendar view', included: true },
                 { text: 'Mobile-friendly interface', included: true },
-                { text: 'Unlimited workout history', included: false },
-                { text: 'Advanced analytics', included: false },
-                { text: 'Custom programs', included: false },
-                { text: 'Priority support', included: false },
+                { text: 'Progress tracking (after 10 workouts)', included: true },
+                { text: 'AI workout plan generation', included: false },
               ]}
-              buttonText="Get Started"
+              buttonText="Get Started Free"
               buttonHref="/auth/signup"
               highlighted={false}
             />
 
             <PricingCard
               name="Pro"
-              price="$9"
+              price="$4.99"
               period="per month"
-              description="For dedicated athletes who want to maximize their gains."
+              description="For dedicated athletes who want AI-powered training."
               features={[
-                { text: 'Unlimited workouts', included: true },
-                { text: 'Advanced progress analytics', included: true },
+                { text: 'Log up to 90 workouts/month', included: true },
                 { text: 'Personal record tracking', included: true },
+                { text: 'Workout calendar view', included: true },
                 { text: 'Mobile-friendly interface', included: true },
-                { text: 'Unlimited workout history', included: true },
-                { text: 'Advanced analytics', included: true },
-                { text: 'Custom programs', included: true },
-                { text: 'Priority support', included: false },
+                { text: 'Instant progress tracking access', included: true },
+                { text: 'AI workout plan generation (3/month)', included: true },
               ]}
-              buttonText="Start Pro Trial"
-              buttonHref="/auth/signup?plan=pro"
+              buttonText="Upgrade to Pro"
+              buttonHref="/auth/signup"
               highlighted={true}
-            />
-
-            <PricingCard
-              name="Lifetime"
-              price="$99"
-              period="one-time"
-              description="Pay once, own forever. Best value for committed lifters."
-              features={[
-                { text: 'Everything in Pro', included: true },
-                { text: 'Lifetime access', included: true },
-                { text: 'All future features', included: true },
-                { text: 'Priority support', included: true },
-                { text: 'Early access to beta', included: true },
-                { text: 'Export all data', included: true },
-                { text: 'API access', included: true },
-                { text: 'Custom integrations', included: true },
-              ]}
-              buttonText="Get Lifetime Access"
-              buttonHref="/auth/signup?plan=lifetime"
-              highlighted={false}
             />
           </div>
         </div>
@@ -90,24 +66,20 @@ export default function PricingPage() {
 
             <div className="space-y-6">
               <FAQ
-                question="Can I try Pro features before paying?"
-                answer="Yes! Start with a 14-day free trial of Pro. No credit card required. Cancel anytime."
+                question="What is included in the free plan?"
+                answer="The free plan includes up to 45 workout logs per month, personal record tracking, calendar view, and progress tracking after you log 10 workouts."
               />
               <FAQ
-                question="What happens to my data if I cancel?"
-                answer="Your workout data is always yours. You can export it anytime, and it stays accessible on the free plan."
+                question="What do I get with Pro?"
+                answer="Pro unlocks AI-powered workout plan generation (3 per month), doubles your workout limit to 90/month, and gives you instant access to progress tracking."
               />
               <FAQ
-                question="Is there a refund policy?"
-                answer="Yes, we offer a 30-day money-back guarantee on all paid plans. No questions asked."
+                question="Can I cancel anytime?"
+                answer="Yes, you can cancel your Pro subscription at any time. You'll keep access until the end of your billing period."
               />
               <FAQ
-                question="Can I switch between plans?"
-                answer="Absolutely. Upgrade, downgrade, or switch to Lifetime anytime. We'll prorate any differences."
-              />
-              <FAQ
-                question="Do you offer team or gym pricing?"
-                answer="We're working on team features. Contact us for early access or custom pricing for gyms."
+                question="Is my payment secure?"
+                answer="Absolutely. All payments are processed securely through Stripe. We never store your card details."
               />
             </div>
           </div>

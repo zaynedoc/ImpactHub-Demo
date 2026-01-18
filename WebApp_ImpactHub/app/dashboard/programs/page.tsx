@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, BookOpen, Users, Sparkles, Loader2, Calendar, Dumbbell, Trash2, Play } from 'lucide-react';
+import { Plus, BookOpen, Sparkles, Loader2, Calendar, Dumbbell, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AIPlanGenerator, type GeneratedPlan } from '@/components/ai/AIPlanGenerator';
@@ -31,7 +31,7 @@ interface SubscriptionInfo {
 }
 
 export default function ProgramsPage() {
-  const [activeTab, setActiveTab] = useState<'my' | 'ai' | 'browse'>('ai');
+  const [activeTab, setActiveTab] = useState<'my' | 'ai'>('ai');
   const [programs, setPrograms] = useState<SavedProgram[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -206,16 +206,6 @@ export default function ProgramsPage() {
         >
           My Programs
         </button>
-        <button
-          onClick={() => setActiveTab('browse')}
-          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'browse'
-              ? 'border-main text-accent'
-              : 'border-transparent text-muted-accent hover:text-bright-accent'
-          }`}
-        >
-          Browse Programs
-        </button>
       </div>
 
       {/* AI Generator Tab */}
@@ -346,17 +336,6 @@ export default function ProgramsPage() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Browse Programs Tab */}
-      {activeTab === 'browse' && (
-        <div className="opacity-0 animate-fade-in-up stagger-3">
-          <EmptyState
-            icon={<Users className="w-8 h-8 text-muted-accent" />}
-            title="Browse Programs Coming Soon"
-            description="Community program templates will be available in a future update."
-          />
         </div>
       )}
     </div>

@@ -6,14 +6,6 @@
 import { headers } from 'next/headers';
 import type { NextRequest } from 'next/server';
 
-// ============================================================================
-// IP EXTRACTION
-// ============================================================================
-
-/**
- * Extract client IP from request headers (server-side only)
- * Handles various proxy configurations (Cloudflare, Vercel, etc.)
- */
 export async function getClientIPFromHeaders(): Promise<string> {
   const headersList = await headers();
   
@@ -57,14 +49,6 @@ export function getClientIPFromRequest(request: NextRequest): string {
   return request.ip || 'unknown';
 }
 
-// ============================================================================
-// INPUT SANITIZATION
-// ============================================================================
-
-/**
- * Sanitize a string to prevent XSS attacks
- * Removes or escapes potentially dangerous characters
- */
 export function sanitizeString(input: string): string {
   if (typeof input !== 'string') return '';
   
@@ -119,13 +103,6 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   return sanitized as T;
 }
 
-// ============================================================================
-// REQUEST VALIDATION
-// ============================================================================
-
-/**
- * Check if a request has a valid origin (for CSRF protection)
- */
 export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');

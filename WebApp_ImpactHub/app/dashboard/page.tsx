@@ -250,13 +250,7 @@ export default function DashboardPage() {
           {recentWorkouts.length === 0 && (
             <div className="text-center py-8">
               <Dumbbell className="w-12 h-12 text-main/40 mx-auto mb-4 animate-pulse" />
-              <p className="text-muted-accent">No workouts yet. Start your first one!</p>
-              <Link href="/dashboard/workouts/new">
-                <Button glow className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Log First Workout
-                </Button>
-              </Link>
+              <p className="text-muted-accent">No workouts yet. Log your first one to get started!</p>
             </div>
           )}
         </div>

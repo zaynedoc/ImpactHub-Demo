@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, Mail, Lock, Eye, EyeOff, User, ArrowRight, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Dumbbell, Mail, Lock, Eye, EyeOff, User, ArrowRight, CheckCircle, ArrowLeft, AtSign } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,16 +16,17 @@ const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
 });
 
 export default function SignupPage() {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
+const [username, setUsername] = useState('');
+const [fullName, setFullName] = useState('');
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [confirmPassword, setConfirmPassword] = useState('');
+const [showPassword, setShowPassword] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const [isLoading, setIsLoading] = useState(false);
+const [isSuccess, setIsSuccess] = useState(false);
+const router = useRouter();
+const supabase = createClient();
 
   // Password strength validation
   const passwordChecks = {
@@ -38,11 +39,17 @@ export default function SignupPage() {
   const isPasswordStrong = Object.values(passwordChecks).every(Boolean);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
+  const usernameValid = username.length >= 3 && username.length <= 30 && /^[a-zA-Z0-9_]+$/.test(username);
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    // Validation
+    if (!usernameValid) {
+      setError('Username must be 3-30 characters (letters, numbers, underscores only)');
+      return;
+    }
+
     if (!isPasswordStrong) {
       setError('Please ensure your password meets all requirements');
       return;
@@ -61,6 +68,7 @@ export default function SignupPage() {
         password,
         options: {
           data: {
+            username: username.toLowerCase(),
             full_name: fullName,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -162,7 +170,19 @@ export default function SignupPage() {
           </div>
 
           <form onSubmit={handleSignup} className="space-y-5">
-            {/* Full name input */}
+            <div className="relative">
+              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-accent/60" />
+              <Input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                required
+                className="pl-10"
+                disabled={isLoading}
+              />
+            </div>
+
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-accent/60" />
               <Input
@@ -176,7 +196,6 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Email input */}
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-accent/60" />
               <Input
@@ -270,14 +289,7 @@ export default function SignupPage() {
 
             {/* Terms notice */}
             <p className="text-xs text-center text-muted-accent">
-              By creating an account, you agree to our{' '}
-              <Link href="/terms" className="text-main hover:text-accent transition-colors">
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="text-main hover:text-accent transition-colors">
-                Privacy Policy
-              </Link>
+                          By creating an account, you agree to the Terms of Service and Privacy Policy
             </p>
           </form>
 

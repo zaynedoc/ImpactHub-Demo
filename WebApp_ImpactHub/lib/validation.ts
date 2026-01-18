@@ -22,10 +22,6 @@ export const NUMERIC_BOUNDS = {
   duration: { min: 1, max: 600 }, // max 10 hours
 } as const;
 
-// ============================================================================
-// STRING VALIDATION
-// ============================================================================
-
 export function validateString(
   value: unknown,
   maxLength: number,
@@ -80,14 +76,10 @@ export function sanitizeForXSS(input: string): string {
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
     .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
     .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '') // Remove object tags
-    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, ''); // Remove embed tags
-}
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '');
+    }
 
-// ============================================================================
-// NUMBER VALIDATION
-// ============================================================================
-
-export function validateNumber(
+    export function validateNumber(
   value: unknown,
   min: number,
   max: number,
@@ -122,10 +114,6 @@ export function validateInteger(
   return validateNumber(value, min, max, { allowDecimals: false });
 }
 
-// ============================================================================
-// UUID VALIDATION
-// ============================================================================
-
 export function validateUUID(value: unknown): { valid: boolean; uuid: string; error?: string } {
   if (typeof value !== 'string') {
     return { valid: false, uuid: '', error: 'UUID must be a string' };
@@ -139,10 +127,6 @@ export function validateUUID(value: unknown): { valid: boolean; uuid: string; er
 
   return { valid: true, uuid: value.toLowerCase() };
 }
-
-// ============================================================================
-// EMAIL VALIDATION
-// ============================================================================
 
 export function validateEmail(value: unknown): { valid: boolean; email: string; error?: string } {
   if (typeof value !== 'string') {
@@ -164,10 +148,6 @@ export function validateEmail(value: unknown): { valid: boolean; email: string; 
 
   return { valid: true, email: trimmed.toLowerCase() };
 }
-
-// ============================================================================
-// PASSWORD VALIDATION
-// ============================================================================
 
 export interface PasswordValidationResult {
   valid: boolean;

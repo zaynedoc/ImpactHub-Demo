@@ -155,10 +155,6 @@ function ProfileSettings() {
           <div className="w-20 h-20 bg-gradient-to-br from-main to-accent rounded-full flex items-center justify-center text-2xl font-bold text-bright-accent shadow-glow-main">
             {initials}
           </div>
-          <div>
-            <Button variant="outline" size="sm">Change Avatar</Button>
-            <p className="text-sm text-muted-accent mt-2">JPG, PNG or GIF. Max 2MB.</p>
-          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -372,14 +368,6 @@ function SecuritySettings() {
       </form>
 
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-bright-accent mb-4">Two-Factor Authentication</h2>
-        <p className="text-muted-accent mb-4">
-          Add an extra layer of security to your account by enabling two-factor authentication.
-        </p>
-        <Button variant="outline">Enable 2FA</Button>
-      </div>
-
-      <div className="glass-surface rounded-xl p-6">
         <h2 className="text-xl font-semibold text-bright-accent mb-4">Active Sessions</h2>
         <p className="text-muted-accent mb-4">
           You are currently logged in on these devices.
@@ -414,13 +402,15 @@ function BillingSettings() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showThankYou, setShowThankYou] = useState(false);
+
 
   useEffect(() => {
     fetchSubscription();
     
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') === 'true') {
-      setMessage({ type: 'success', text: 'Successfully upgraded to Pro!' });
+      setShowThankYou(true);
       window.history.replaceState({}, '', '/dashboard/settings?tab=billing');
     }
     if (params.get('canceled') === 'true') {
@@ -523,6 +513,29 @@ function BillingSettings() {
 
   return (
     <div className="space-y-6 opacity-0 animate-fade-in-up stagger-3">
+      {showThankYou && (
+        <div className="bg-gradient-to-r from-main/30 via-accent/20 to-main/30 rounded-xl border border-accent/50 p-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-main/10 to-accent/10 animate-pulse" />
+          <div className="relative">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent/30 rounded-full flex items-center justify-center">
+                <CreditCard className="w-6 h-6 text-accent" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-bright-accent">Thank you for upgrading!</h3>
+                <p className="text-muted-accent">You now have full access to all Pro features including AI workout generation.</p>
+              </div>
+              <button
+                onClick={() => setShowThankYou(false)}
+                className="text-muted-accent hover:text-bright-accent transition-colors"
+              >
+                ?
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {message && (
         <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
           {message.text}

@@ -1,1 +1,5 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.3864779" />
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.3864779">
+  <ItemGroup>
+    <Folder Include="app\%28public%29\contact\" />
+  </ItemGroup>
+</Project>

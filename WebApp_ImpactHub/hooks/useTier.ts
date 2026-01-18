@@ -43,16 +43,16 @@ export function useTier(): TierInfo {
           return;
         }
 
-        // Check user's subscription tier from profile
-        // For now, all users are on free tier
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_tier')
-          .eq('id', user.id)
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('user_id', user.id)
           .single();
 
-        const profileData = profile as { subscription_tier?: string } | null;
-        const userTier = (profileData?.subscription_tier as UserTier) || 'free';
+        const subData = subscription as { plan?: string; status?: string } | null;
+        const isActiveProSub = subData?.plan === 'pro' && 
+          (subData?.status === 'active' || subData?.status === 'trialing');
+        const userTier: UserTier = isActiveProSub ? 'pro' : 'free';
         setTier(userTier);
 
         // Count workouts this month
