@@ -36,10 +36,6 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
-# Markdown files
-*.md
-**/*.md
-
 # Misc
 .vercel
 .turbo
