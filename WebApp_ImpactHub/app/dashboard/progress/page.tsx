@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useTier } from '@/hooks/useTier';
+import { useDemoStore } from '@/lib/demo';
 
 interface PR {
   exercise_name: string;
@@ -46,6 +47,12 @@ interface StreakInfo {
   last_workout_date: string | null;
 }
 
+// Helper to get today's date string
+function getTodayStr(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 export default function ProgressPage() {
   const { progressUnlocked, totalWorkouts, workoutsUntilProgressUnlock, isLoading: tierLoading } = useTier();
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
@@ -54,6 +61,10 @@ export default function ProgressPage() {
   const [volumeSummary, setVolumeSummary] = useState<VolumeSummary | null>(null);
   const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Demo store integration
+  const { state: demoState } = useDemoStore();
+  const isDemo = demoState.isDemo;
 
   const getDaysForRange = (range: 'week' | 'month' | 'year') => {
     switch (range) {
@@ -64,13 +75,112 @@ export default function ProgressPage() {
   };
 
   useEffect(() => {
-    // Only fetch progress data if unlocked
-    if (progressUnlocked) {
+    // In demo mode, always show progress with demo data
+    if (isDemo) {
+      fetchDemoProgressData();
+    } else if (progressUnlocked) {
       fetchProgressData();
     } else {
       setIsLoading(false);
     }
-  }, [timeRange, progressUnlocked]);
+  }, [timeRange, progressUnlocked, isDemo, demoState.workouts, demoState.personalRecords]);
+
+  const fetchDemoProgressData = () => {
+    const days = getDaysForRange(timeRange);
+    const todayStr = getTodayStr();
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth() + 1).padStart(2, '0')}-${String(cutoffDate.getDate()).padStart(2, '0')}`;
+    
+    // Get PRs from demo store
+    const demoPRs: PR[] = demoState.personalRecords.map(pr => ({
+      exercise_name: pr.exercise_name,
+      weight: pr.weight,
+      reps: pr.reps,
+      date: pr.achieved_at,
+    }));
+    setPrs(demoPRs);
+    
+    // Calculate volume data from demo workouts
+    const completedWorkouts = demoState.workouts
+      .filter(w => w.status === 'completed' && w.workout_date >= cutoffStr && w.workout_date <= todayStr);
+    
+    // Group by date for daily volume
+    const dailyVolumeMap = new Map<string, VolumeData>();
+    let totalVolume = 0;
+    let totalSets = 0;
+    let totalReps = 0;
+    
+    completedWorkouts.forEach(w => {
+      let dayVolume = 0;
+      let daySets = 0;
+      let dayReps = 0;
+      
+      w.exercises.forEach(ex => {
+        ex.sets.forEach(s => {
+          const setVolume = s.weight * s.reps;
+          dayVolume += setVolume;
+          daySets++;
+          dayReps += s.reps;
+          totalVolume += setVolume;
+          totalSets++;
+          totalReps += s.reps;
+        });
+      });
+      
+      if (dailyVolumeMap.has(w.workout_date)) {
+        const existing = dailyVolumeMap.get(w.workout_date)!;
+        existing.total_volume += dayVolume;
+        existing.total_sets += daySets;
+        existing.total_reps += dayReps;
+      } else {
+        dailyVolumeMap.set(w.workout_date, {
+          date: w.workout_date,
+          total_volume: dayVolume,
+          total_sets: daySets,
+          total_reps: dayReps,
+        });
+      }
+    });
+    
+    setVolumeData(Array.from(dailyVolumeMap.values()).sort((a, b) => a.date.localeCompare(b.date)));
+    setVolumeSummary({
+      total_volume: totalVolume,
+      total_sets: totalSets,
+      total_reps: totalReps,
+      avg_volume_per_workout: completedWorkouts.length > 0 ? Math.round(totalVolume / completedWorkouts.length) : 0,
+      workout_count: completedWorkouts.length,
+    });
+    
+    // Calculate streak from demo data
+    let currentStreak = 0;
+    const sortedDates = [...new Set(demoState.workouts
+      .filter(w => w.status === 'completed')
+      .map(w => w.workout_date))]
+      .sort((a, b) => b.localeCompare(a));
+    
+    if (sortedDates.length > 0) {
+      let checkDate = new Date(today);
+      for (const dateStr of sortedDates) {
+        const checkDateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        if (dateStr === checkDateStr) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else if (dateStr < checkDateStr) {
+          break;
+        }
+      }
+    }
+    
+    setStreakInfo({
+      current_streak: currentStreak,
+      longest_streak: Math.max(currentStreak, 3),
+      last_workout_date: sortedDates[0] || null,
+    });
+    
+    setIsLoading(false);
+  };
 
   const fetchProgressData = async () => {
     setIsLoading(true);
@@ -115,8 +225,9 @@ export default function ProgressPage() {
     );
   }
 
-  // Show workout-based unlock gate (not a paywall!)
-  if (!progressUnlocked) {
+  // In demo mode, always show progress page (skip unlock gate)
+  // Show workout-based unlock gate only for non-demo users
+  if (!isDemo && !progressUnlocked) {
     const progressPercent = Math.min(100, (totalWorkouts / 10) * 100);
     
     return (
