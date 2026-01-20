@@ -111,10 +111,10 @@ export default function ForgotPasswordPage() {
       </div>
 
       <Link href="/" className="group flex items-center gap-2 mb-8">
-        <div className="drop-shadow-[0_0_15px_rgba(17,100,102,0.5)]">
+        <div className="drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">
           <Dumbbell className="w-10 h-10 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
         </div>
-        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(17,100,102,0.5)] group-hover:text-accent transition-all duration-300">
+        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(139,92,246,0.5)] group-hover:text-accent transition-all duration-300">
           ImpactHub
         </span>
       </Link>

@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useDemoStore } from '@/lib/demo';
 
 interface Workout {
   id: string;
@@ -40,14 +41,38 @@ export default function CalendarPage() {
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Demo store integration
+  const { state: demoState } = useDemoStore();
+  const isDemo = demoState.isDemo;
 
   useEffect(() => {
     fetchWorkouts();
     fetchScheduledWorkouts();
-  }, [currentDate]);
+  }, [currentDate, isDemo, demoState.workouts]);
 
   const fetchWorkouts = async () => {
     try {
+      // Use demo data when in demo mode
+      if (isDemo) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+        const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+        
+        const demoWorkouts: Workout[] = demoState.workouts
+          .filter(w => w.workout_date >= firstDay && w.workout_date <= lastDay)
+          .map(w => ({
+            id: w.id,
+            title: w.title,
+            workout_date: w.workout_date,
+            duration_minutes: w.duration_minutes,
+            workout_exercises: w.exercises.map(ex => ({ id: ex.id })),
+          }));
+        setWorkouts(demoWorkouts);
+        return;
+      }
+
       const response = await fetch('/api/workouts?pageSize=100');
       const result = await response.json();
 
@@ -69,6 +94,29 @@ export default function CalendarPage() {
 
   const fetchScheduledWorkouts = async () => {
     try {
+      // In demo mode, we don't have scheduled workouts from API
+      if (isDemo) {
+        // Show planned workouts from demo store as "scheduled"
+        const plannedDemoWorkouts: ScheduledWorkout[] = demoState.workouts
+          .filter(w => w.status === 'planned')
+          .map(w => ({
+            id: w.id,
+            title: w.title,
+            workout_date: w.workout_date,
+            status: 'planned' as const,
+            notes: w.notes,
+            scheduled_exercises: JSON.stringify(w.exercises.map(ex => ({
+              name: ex.exercise_name,
+              sets: ex.sets.length || 3,
+              reps: '8-12',
+            }))),
+            program_id: null,
+          }));
+        setScheduledWorkouts(plannedDemoWorkouts);
+        setIsLoading(false);
+        return;
+      }
+
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
@@ -152,6 +200,12 @@ export default function CalendarPage() {
 
   const handleDeleteScheduled = async (scheduledId: string) => {
     if (!confirm('Delete this scheduled workout?')) return;
+    
+    // Handle demo mode deletion
+    if (isDemo) {
+      setScheduledWorkouts(prev => prev.filter(s => s.id !== scheduledId));
+      return;
+    }
     
     try {
       const res = await fetch(`/api/scheduled-workouts/${scheduledId}`, {

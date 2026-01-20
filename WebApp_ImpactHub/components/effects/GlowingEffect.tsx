@@ -126,38 +126,38 @@ const GlowingEffect = memo(
     const getGradient = () => {
       switch (variant) {
         case 'accent':
-          return `radial-gradient(circle, #FFCB9A 10%, transparent 20%),
-            radial-gradient(circle at 40% 40%, #D9B08C 5%, transparent 15%),
-            radial-gradient(circle at 60% 60%, #116466 10%, transparent 20%),
+          return `radial-gradient(circle, #a78bfa 10%, transparent 20%),
+            radial-gradient(circle at 40% 40%, #c4b5fd 5%, transparent 15%),
+            radial-gradient(circle at 60% 60%, #8b5cf6 10%, transparent 20%),
             repeating-conic-gradient(
               from 236.84deg at 50% 50%,
-              #FFCB9A 0%,
-              #D9B08C calc(25% / var(--repeating-conic-gradient-times)),
-              #116466 calc(50% / var(--repeating-conic-gradient-times)),
-              #D1E8E2 calc(75% / var(--repeating-conic-gradient-times)),
-              #FFCB9A calc(100% / var(--repeating-conic-gradient-times))
+              #a78bfa 0%,
+              #c4b5fd calc(25% / var(--repeating-conic-gradient-times)),
+              #8b5cf6 calc(50% / var(--repeating-conic-gradient-times)),
+              #ede9fe calc(75% / var(--repeating-conic-gradient-times)),
+              #a78bfa calc(100% / var(--repeating-conic-gradient-times))
             )`;
         case 'bright':
-          return `radial-gradient(circle, #D1E8E2 10%, transparent 20%),
-            radial-gradient(circle at 40% 40%, #116466 5%, transparent 15%),
+          return `radial-gradient(circle, #ede9fe 10%, transparent 20%),
+            radial-gradient(circle at 40% 40%, #8b5cf6 5%, transparent 15%),
             repeating-conic-gradient(
               from 236.84deg at 50% 50%,
-              #D1E8E2 0%,
-              #116466 calc(50% / var(--repeating-conic-gradient-times)),
-              #D1E8E2 calc(100% / var(--repeating-conic-gradient-times))
+              #ede9fe 0%,
+              #8b5cf6 calc(50% / var(--repeating-conic-gradient-times)),
+              #ede9fe calc(100% / var(--repeating-conic-gradient-times))
             )`;
         default:
-          return `radial-gradient(circle, #116466 10%, transparent 20%),
-            radial-gradient(circle at 40% 40%, #FFCB9A 5%, transparent 15%),
-            radial-gradient(circle at 60% 60%, #D9B08C 10%, transparent 20%),
-            radial-gradient(circle at 40% 60%, #D1E8E2 10%, transparent 20%),
+          return `radial-gradient(circle, #8b5cf6 10%, transparent 20%),
+            radial-gradient(circle at 40% 40%, #a78bfa 5%, transparent 15%),
+            radial-gradient(circle at 60% 60%, #c4b5fd 10%, transparent 20%),
+            radial-gradient(circle at 40% 60%, #ede9fe 10%, transparent 20%),
             repeating-conic-gradient(
               from 236.84deg at 50% 50%,
-              #116466 0%,
-              #FFCB9A calc(25% / var(--repeating-conic-gradient-times)),
-              #D9B08C calc(50% / var(--repeating-conic-gradient-times)),
-              #D1E8E2 calc(75% / var(--repeating-conic-gradient-times)),
-              #116466 calc(100% / var(--repeating-conic-gradient-times))
+              #8b5cf6 0%,
+              #a78bfa calc(25% / var(--repeating-conic-gradient-times)),
+              #c4b5fd calc(50% / var(--repeating-conic-gradient-times)),
+              #ede9fe calc(75% / var(--repeating-conic-gradient-times)),
+              #8b5cf6 calc(100% / var(--repeating-conic-gradient-times))
             )`;
       }
     };

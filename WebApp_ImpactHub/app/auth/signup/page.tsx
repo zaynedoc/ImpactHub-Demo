@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import dynamic from 'next/dynamic';
+import { useDemoStore } from '@/lib/demo';
 
 // Dynamic import for DarkVeil background
 const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
@@ -25,8 +26,19 @@ const [showPassword, setShowPassword] = useState(false);
 const [error, setError] = useState<string | null>(null);
 const [isLoading, setIsLoading] = useState(false);
 const [isSuccess, setIsSuccess] = useState(false);
+const [isDemoLoading, setIsDemoLoading] = useState(false);
 const router = useRouter();
 const supabase = createClient();
+const { loginAsGuest } = useDemoStore();
+
+  function handleDemoBypass() {
+    setIsDemoLoading(true);
+    loginAsGuest();
+    // Small delay for visual feedback
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 500);
+  }
 
   // Password strength validation
   const passwordChecks = {
@@ -100,7 +112,7 @@ const supabase = createClient();
         {/* Aurora Background */}
         <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
           <DarkVeil 
-            hueShift={180} 
+            hueShift={260} 
             speed={0.2}
             noiseIntensity={0.02}
           />
@@ -137,7 +149,7 @@ const supabase = createClient();
       {/* Aurora Background */}
       <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
         <DarkVeil 
-          hueShift={180} 
+          hueShift={260} 
           speed={0.2}
           noiseIntensity={0.02}
         />
@@ -153,10 +165,10 @@ const supabase = createClient();
 
       {/* Logo with drop shadow */}
       <Link href="/" className="group flex items-center gap-2 mb-8">
-        <div className="drop-shadow-[0_0_15px_rgba(17,100,102,0.5)]">
+        <div className="drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">
           <Dumbbell className="w-10 h-10 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
         </div>
-        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(17,100,102,0.5)] group-hover:text-accent transition-all duration-300">
+        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(139,92,246,0.5)] group-hover:text-accent transition-all duration-300">
           ImpactHub
         </span>
       </Link>
@@ -316,6 +328,28 @@ const supabase = createClient();
                 Sign in instead
               </Button>
             </Link>
+          </div>
+
+          {/* Demo bypass section */}
+          <div className="mt-6 pt-6 border-t border-main/30">
+            <div className="text-center mb-3">
+              <span className="text-xs text-muted-accent bg-muted-main/50 px-3 py-1 rounded-full">
+                Demo Mode
+              </span>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              size="lg"
+              onClick={handleDemoBypass}
+              isLoading={isDemoLoading}
+            >
+              Continue as Demo User
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <p className="text-xs text-muted-accent/60 text-center mt-2">
+              Skip signup and explore the dashboard
+            </p>
           </div>
         </div>
       </div>

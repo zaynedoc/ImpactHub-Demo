@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ApplyProgramModal } from '@/components/programs/ApplyProgramModal';
+import { useDemoStore } from '@/lib/demo';
 
 interface Exercise {
   name: string;
@@ -72,14 +73,63 @@ const [showApplyModal, setShowApplyModal] = useState(false);
 const [isDeleting, setIsDeleting] = useState(false);
 const [isDiscontinuing, setIsDiscontinuing] = useState(false);
 
+// Demo store integration
+const { state: demoState, deleteProgram: deleteDemoProgram } = useDemoStore();
+const isDemo = demoState.isDemo;
+
   useEffect(() => {
     if (programId) {
       fetchProgram();
     }
-  }, [programId]);
+  }, [programId, isDemo, demoState.programs]);
 
   const fetchProgram = async () => {
     try {
+      // Use demo data when in demo mode
+      if (isDemo) {
+        const demoProgram = demoState.programs.find(p => p.id === programId);
+        if (demoProgram) {
+          const convertedProgram: SavedProgram = {
+            id: demoProgram.id,
+            name: demoProgram.name,
+            description: demoProgram.description,
+            weeks: demoProgram.weeks,
+            days_per_week: demoProgram.days_per_week,
+            goal: demoProgram.category,
+            experience_level: demoProgram.difficulty,
+            equipment: null,
+            source: 'manual',
+            is_active: false,
+            plan_data: {
+              name: demoProgram.name,
+              description: demoProgram.description || '',
+              weeks: demoProgram.weeks,
+              daysPerWeek: demoProgram.days_per_week,
+              workouts: demoProgram.workouts.map(w => ({
+                day: w.day_number,
+                name: w.name,
+                focus: w.name.includes('Push') ? 'Chest, Shoulders, Triceps' :
+                       w.name.includes('Pull') ? 'Back, Biceps' :
+                       w.name.includes('Leg') ? 'Quadriceps, Hamstrings, Glutes' : 'Full Body',
+                exercises: w.exercises.map(e => ({
+                  name: e.exercise_name,
+                  sets: e.target_sets || 3,
+                  reps: e.target_reps || '8-12',
+                  restSeconds: e.rest_seconds || 90,
+                  notes: e.notes || undefined,
+                })),
+              })),
+            },
+            created_at: demoProgram.created_at,
+          };
+          setProgram(convertedProgram);
+        } else {
+          router.push('/dashboard/programs');
+        }
+        setIsLoading(false);
+        return;
+      }
+
       const res = await fetch(`/api/programs/${programId}`);
       const data = await res.json();
       if (data.success) {
@@ -97,6 +147,13 @@ const [isDiscontinuing, setIsDiscontinuing] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this program?')) return;
+    
+    // Handle demo mode deletion
+    if (isDemo) {
+      deleteDemoProgram(programId);
+      router.push('/dashboard/programs');
+      return;
+    }
     
     setIsDeleting(true);
     try {

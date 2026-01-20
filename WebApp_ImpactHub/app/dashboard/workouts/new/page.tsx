@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Trash2, GripVertical, Save, History, X, Search, Loader
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Toast, useToastLocal } from '@/components/ui/Toast';
+import { useDemoStore, DEMO_EXERCISE_LIBRARY } from '@/lib/demo';
 
 interface ExerciseSet {
   id: string;
@@ -55,6 +56,10 @@ const [workoutDate, setWorkoutDate] = useState(
 const [notes, setNotes] = useState('');
 const [exercises, setExercises] = useState<Exercise[]>([]);
   
+// Demo store integration
+const { state: demoState, addWorkout: addDemoWorkout } = useDemoStore();
+const isDemo = demoState.isDemo;
+
 // Track the scheduled workout we're starting from
 const [scheduledWorkoutId, setScheduledWorkoutId] = useState<string | null>(scheduledId);
   
@@ -159,6 +164,37 @@ useEffect(() => {
   const fetchPreviousExercises = async () => {
     setIsLoadingPrevious(true);
     try {
+      // Use demo data when in demo mode
+      if (isDemo) {
+        const exerciseMap = new Map<string, PreviousExercise>();
+        
+        // Get exercises from demo workouts
+        demoState.workouts.forEach((workout) => {
+          workout.exercises?.forEach((exercise) => {
+            if (!exerciseMap.has(exercise.exercise_name)) {
+              exerciseMap.set(exercise.exercise_name, {
+                exercise_name: exercise.exercise_name,
+                sets: exercise.sets || [],
+              });
+            }
+          });
+        });
+        
+        // Also add exercises from the demo library
+        DEMO_EXERCISE_LIBRARY.forEach((ex) => {
+          if (!exerciseMap.has(ex.name)) {
+            exerciseMap.set(ex.name, {
+              exercise_name: ex.name,
+              sets: [],
+            });
+          }
+        });
+        
+        setPreviousExercises(Array.from(exerciseMap.values()));
+        setIsLoadingPrevious(false);
+        return;
+      }
+
       const response = await fetch('/api/workouts?pageSize=20');
       const result = await response.json();
       
@@ -333,6 +369,50 @@ useEffect(() => {
     setIsSubmitting(true);
 
     try {
+      // Handle demo mode - save to local store
+      if (isDemo) {
+        const demoExercises = exercises
+          .filter(ex => ex.name.trim())
+          .map((exercise, idx) => ({
+            id: `demo-ex-${Date.now()}-${idx}`,
+            workout_id: '',
+            exercise_name: exercise.name.trim(),
+            order_index: idx,
+            notes: null,
+            created_at: new Date().toISOString(),
+            sets: exercise.sets
+              .filter(s => parseFloat(s.weight) > 0 || parseInt(s.reps) > 0)
+              .map((set, setIdx) => ({
+                id: `demo-set-${Date.now()}-${idx}-${setIdx}`,
+                workout_exercise_id: '',
+                set_number: setIdx + 1,
+                weight: parseFloat(set.weight) || 0,
+                reps: parseInt(set.reps) || 0,
+                rpe: null,
+                rir: set.rir ? parseInt(set.rir) : null,
+                is_warmup: false,
+                is_dropset: false,
+                notes: null,
+                created_at: new Date().toISOString(),
+              })),
+          }));
+
+        addDemoWorkout({
+          title: title.trim(),
+          workout_date: workoutDate,
+          duration_minutes: null,
+          notes: notes.trim() || null,
+          status: 'completed',
+          exercises: demoExercises,
+        });
+
+        showToast('Workout saved to demo session!', 'success');
+        setTimeout(() => {
+          router.push('/dashboard/workouts');
+        }, 1000);
+        return;
+      }
+
       const workoutResponse = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

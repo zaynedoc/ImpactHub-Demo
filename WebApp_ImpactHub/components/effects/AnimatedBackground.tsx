@@ -19,7 +19,7 @@ function FloatingOrb({
   const colors = {
     main: 'bg-main',
     accent: 'bg-accent',
-    bright: 'bg-bright-accent',
+    bright: 'bg-indigo-500',
   };
 
   const sizes = {
@@ -83,12 +83,12 @@ export default function AnimatedBackground({
             className="absolute inset-0"
             style={{
               backgroundImage: `
-                radial-gradient(at 40% 20%, rgba(17, 100, 102, 0.4) 0px, transparent 50%),
-                radial-gradient(at 80% 0%, rgba(255, 203, 154, 0.3) 0px, transparent 50%),
-                radial-gradient(at 0% 50%, rgba(17, 100, 102, 0.3) 0px, transparent 50%),
-                radial-gradient(at 80% 50%, rgba(209, 232, 226, 0.2) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, rgba(255, 203, 154, 0.3) 0px, transparent 50%),
-                radial-gradient(at 80% 100%, rgba(17, 100, 102, 0.4) 0px, transparent 50%)
+                radial-gradient(at 40% 20%, rgba(99, 102, 241, 0.4) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, rgba(139, 92, 246, 0.3) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, rgba(79, 70, 229, 0.3) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, rgba(124, 58, 237, 0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.3) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, rgba(139, 92, 246, 0.4) 0px, transparent 50%)
               `,
             }}
           />

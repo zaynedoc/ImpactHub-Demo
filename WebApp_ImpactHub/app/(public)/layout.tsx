@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Navbar } from '@/components/layout/Navbar';
 import GradualBlur from '@/components/effects/GradualBlur';
+import { DemoBanner } from '@/components/ui/DemoBanner';
 
 // Dynamic import to avoid SSR issues with WebGL
 const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
@@ -17,10 +18,13 @@ export default function PublicLayout({
 }) {
   return (
     <>
+      {/* Demo Banner */}
+      <DemoBanner />
+
       {/* Background DarkVeil effect */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <DarkVeil 
-          hueShift={120} 
+          hueShift={260} 
           speed={0.3}
           noiseIntensity={0.02}
         />
@@ -29,7 +33,7 @@ export default function PublicLayout({
       </div>
 
       <Navbar />
-      <main className="pt-16 relative">
+      <main className="pt-24 relative">
         {children}
       </main>
 

@@ -41,7 +41,7 @@ A modern fitness tracking web application built with Next.js 14, Supabase, and S
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/zaynedoc/WebApp_ImpactHub.git
+git clone https://github.com/zaynedoc/ImpactHub-Demo.git
 cd WebApp_ImpactHub
 ```
 
@@ -177,4 +177,4 @@ MIT
 
 ---
 
-Built with ? by [zaynedoc](https://github.com/zaynedoc)
+Built by [zaynedoc](https://github.com/zaynedoc)

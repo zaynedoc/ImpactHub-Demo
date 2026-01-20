@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useDemoStore } from '@/lib/demo';
 
 interface Workout {
   id: string;
@@ -70,21 +71,126 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [workoutDays, setWorkoutDays] = useState<Set<number>>(new Set());
   const [workoutCountThisWeek, setWorkoutCountThisWeek] = useState(0);
+  
+  // Demo store integration
+  const { state: demoState } = useDemoStore();
+  const isDemo = demoState.isDemo;
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [isDemo, demoState.workouts, demoState.personalRecords]);
 
   const fetchDashboardData = async () => {
     try {
+      const today = getTodayLocal();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const startOfWeek = getStartOfWeekLocal(today);
+      const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
+      
+      // Use demo data when in demo mode
+      if (isDemo) {
+        // Get completed workouts from demo store
+        const demoWorkouts: Workout[] = demoState.workouts
+          .filter(w => w.status === 'completed' && w.workout_date <= todayStr)
+          .map(w => ({
+            id: w.id,
+            title: w.title,
+            workout_date: w.workout_date,
+            duration_minutes: w.duration_minutes,
+            workout_exercises: w.exercises.map(ex => ({ id: ex.id, exercise_name: ex.exercise_name })),
+          }));
+        
+        setRecentWorkouts(demoWorkouts.slice(0, 3));
+        
+        // Calculate workout days for this week
+        const daysWithWorkouts = new Set<number>();
+        let weekWorkoutCount = 0;
+        
+        demoWorkouts.forEach((w) => {
+          if (w.workout_date >= startOfWeekStr && w.workout_date <= todayStr) {
+            weekWorkoutCount++;
+            const workoutDate = parseLocalDate(w.workout_date);
+            const dayOfWeek = workoutDate.getDay();
+            const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            daysWithWorkouts.add(adjustedDay);
+          }
+        });
+        
+        setWorkoutDays(daysWithWorkouts);
+        setWorkoutCountThisWeek(weekWorkoutCount);
+        
+        // Get PRs from demo store
+        const demoPRs: PR[] = demoState.personalRecords.slice(0, 3).map(pr => ({
+          exercise_name: pr.exercise_name,
+          weight: pr.weight,
+          reps: pr.reps,
+          date: pr.achieved_at,
+        }));
+        setRecentPRs(demoPRs);
+        
+        // Calculate volume from demo workouts (last 7 days)
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
+        
+        let totalVolume = 0;
+        let totalSets = 0;
+        let totalReps = 0;
+        
+        demoState.workouts
+          .filter(w => w.status === 'completed' && w.workout_date >= sevenDaysAgoStr && w.workout_date <= todayStr)
+          .forEach(w => {
+            w.exercises.forEach(ex => {
+              ex.sets.forEach(s => {
+                totalVolume += s.weight * s.reps;
+                totalSets++;
+                totalReps += s.reps;
+              });
+            });
+          });
+        
+        setVolumeSummary({
+          total_volume: totalVolume,
+          total_sets: totalSets,
+          total_reps: totalReps,
+          avg_volume_per_workout: demoWorkouts.length > 0 ? Math.round(totalVolume / demoWorkouts.length) : 0,
+          workout_count: demoWorkouts.filter(w => w.workout_date >= sevenDaysAgoStr).length,
+        });
+        
+        // Calculate streak from demo data
+        let currentStreak = 0;
+        const sortedDates = [...new Set(demoState.workouts
+          .filter(w => w.status === 'completed')
+          .map(w => w.workout_date))]
+          .sort((a, b) => b.localeCompare(a)); // Sort descending
+        
+        if (sortedDates.length > 0) {
+          let checkDate = today;
+          for (const dateStr of sortedDates) {
+            const checkDateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+            if (dateStr === checkDateStr) {
+              currentStreak++;
+              checkDate.setDate(checkDate.getDate() - 1);
+            } else if (dateStr < checkDateStr) {
+              break;
+            }
+          }
+        }
+        
+        setStreakInfo({
+          current_streak: currentStreak,
+          longest_streak: Math.max(currentStreak, 3), // Demo data shows at least 3
+          last_workout_date: sortedDates[0] || null,
+        });
+        
+        setIsLoading(false);
+        return;
+      }
+
       // Fetch recent workouts
       const workoutsRes = await fetch('/api/workouts?pageSize=50');
       const workoutsData = await workoutsRes.json();
       if (workoutsData.success) {
-        // Get today's date (local time, no timezone issues)
-        const today = getTodayLocal();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        
         // Filter out future workouts for display (only show past/today)
         const pastAndTodayWorkouts = (workoutsData.data || []).filter((w: Workout) => {
           return w.workout_date <= todayStr;
@@ -93,9 +199,6 @@ export default function DashboardPage() {
         setRecentWorkouts(pastAndTodayWorkouts.slice(0, 3));
         
         // Calculate which days this week have workouts
-        const startOfWeek = getStartOfWeekLocal(today);
-        const startOfWeekStr = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
-        
         const daysWithWorkouts = new Set<number>();
         let weekWorkoutCount = 0;
         

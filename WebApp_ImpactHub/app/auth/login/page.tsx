@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import dynamic from 'next/dynamic';
+import { useDemoStore, DEMO_CREDENTIALS } from '@/lib/demo';
 
 // Dynamic import for DarkVeil background
 const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
@@ -16,45 +17,66 @@ const DarkVeil = dynamic(() => import('@/components/effects/DarkVeil'), {
 });
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [showPassword, setShowPassword] = useState(false);
+const [error, setError] = useState<string | null>(null);
+const [isLoading, setIsLoading] = useState(false);
+const [isDemoLoading, setIsDemoLoading] = useState(false);
+const router = useRouter();
+const supabase = createClient();
+const { loginAsGuest } = useDemoStore();
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+async function handleLogin(e: React.FormEvent) {
+  e.preventDefault();
+  setError(null);
+  setIsLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
+  // Check for guest credentials
+  if (email === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
+    loginAsGuest();
+    setTimeout(() => {
       router.push('/dashboard');
-      router.refresh();
-    } catch {
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    }, 300);
+    return;
   }
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    router.push('/dashboard');
+    router.refresh();
+  } catch {
+    setError('An unexpected error occurred. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+}
+
+function handleDemoBypass() {
+  setIsDemoLoading(true);
+  loginAsGuest();
+  // Small delay for visual feedback
+  setTimeout(() => {
+    router.push('/dashboard');
+  }, 500);
+}
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative">
       {/* Aurora Background */}
       <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
         <DarkVeil 
-          hueShift={200} 
+          hueShift={260} 
           speed={0.2}
           noiseIntensity={0.02}
         />
@@ -70,10 +92,10 @@ export default function LoginPage() {
 
       {/* Logo with drop shadow */}
       <Link href="/" className="group flex items-center gap-2 mb-8">
-        <div className="drop-shadow-[0_0_15px_rgba(17,100,102,0.5)]">
+        <div className="drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]">
           <Dumbbell className="w-10 h-10 text-white group-hover:text-accent transition-colors duration-300 group-hover:rotate-12" />
         </div>
-        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(17,100,102,0.5)] group-hover:text-accent transition-all duration-300">
+        <span className="text-2xl font-bold text-white drop-shadow-[0_0_15px_rgba(139,92,246,0.5)] group-hover:text-accent transition-all duration-300">
           ImpactHub
         </span>
       </Link>
@@ -176,6 +198,34 @@ export default function LoginPage() {
                 Create account
               </Button>
             </Link>
+          </div>
+
+          {/* Demo bypass section */}
+          <div className="mt-6 pt-6 border-t border-main/30">
+            <div className="text-center mb-3">
+              <span className="text-xs text-muted-accent bg-muted-main/50 px-3 py-1 rounded-full">
+                Demo Mode
+              </span>
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              size="lg"
+              onClick={handleDemoBypass}
+              isLoading={isDemoLoading}
+            >
+              Continue as Demo User
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <p className="text-xs text-muted-accent/60 text-center mt-2">
+              Skip login and explore the dashboard
+            </p>
+            <div className="mt-3 p-3 rounded-lg bg-muted-main/50 border border-main/20">
+              <p className="text-xs text-muted-accent text-center">
+                <span className="font-medium">Guest credentials:</span><br />
+                <span className="text-bright-accent/80 font-mono">guest@guest.com</span> / <span className="text-bright-accent/80 font-mono">Password123</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>

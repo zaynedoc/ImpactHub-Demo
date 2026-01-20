@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, BookOpen, Sparkles, Loader2, Calendar, Dumbbell, Trash2, Play } from 'lucide-react';
+import { Plus, BookOpen, Sparkles, Loader2, Calendar, Dumbbell, Trash2, Play, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AIPlanGenerator, type GeneratedPlan } from '@/components/ai/AIPlanGenerator';
 import { GeneratedPlanDisplay } from '@/components/ai/GeneratedPlanDisplay';
 import { ProPaywall } from '@/components/billing/ProPaywall';
+import { useDemoStore } from '@/lib/demo';
 
 interface SavedProgram {
   id: string;
@@ -31,27 +32,70 @@ interface SubscriptionInfo {
 }
 
 export default function ProgramsPage() {
-  const [activeTab, setActiveTab] = useState<'my' | 'ai'>('ai');
-  const [programs, setPrograms] = useState<SavedProgram[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const [activeTab, setActiveTab] = useState<'my' | 'ai'>('my');
+const [programs, setPrograms] = useState<SavedProgram[]>([]);
+const [isLoading, setIsLoading] = useState(true);
   
-  // AI Plan Generator state
-  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+// AI Plan Generator state
+const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
+const [isSaving, setIsSaving] = useState(false);
+const [isSaved, setIsSaved] = useState(false);
   
-  // Subscription state
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+// Subscription state
+const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+const [isUpgrading, setIsUpgrading] = useState(false);
+  
+// Demo store integration
+const { state: demoState, deleteProgram: deleteDemoProgram } = useDemoStore();
+const isDemo = demoState.isDemo;
 
-  useEffect(() => {
-    fetchPrograms();
-    fetchSubscription();
-  }, []);
+useEffect(() => {
+  fetchPrograms();
+  fetchSubscription();
+}, [isDemo, demoState.programs]);
 
   const fetchPrograms = async () => {
     try {
+      // Use demo data when in demo mode
+      if (isDemo) {
+        const demoPrograms: SavedProgram[] = demoState.programs.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          weeks: p.weeks,
+          days_per_week: p.days_per_week,
+          goal: p.category,
+          experience_level: p.difficulty,
+          source: 'manual' as const,
+          is_active: false,
+          plan_data: {
+            name: p.name,
+            description: p.description || '',
+            weeks: p.weeks,
+            daysPerWeek: p.days_per_week,
+            workouts: p.workouts.map(w => ({
+              day: w.day_number,
+              name: w.name,
+              focus: w.name.includes('Push') ? 'Chest, Shoulders, Triceps' :
+                     w.name.includes('Pull') ? 'Back, Biceps' :
+                     w.name.includes('Leg') ? 'Quadriceps, Hamstrings, Glutes' : 'Full Body',
+              exercises: w.exercises.map(e => ({
+                name: e.exercise_name,
+                sets: e.target_sets || 3,
+                reps: e.target_reps || '8-12',
+                restSeconds: e.rest_seconds || 90,
+                notes: e.notes || undefined,
+              })),
+            })),
+          },
+          created_at: p.created_at,
+        }));
+        setPrograms(demoPrograms);
+        setIsLoading(false);
+        return;
+      }
+
       const res = await fetch('/api/programs');
       const data = await res.json();
       if (data.success) {
@@ -125,6 +169,12 @@ export default function ProgramsPage() {
 
   const handleDeleteProgram = async (id: string) => {
     if (!confirm('Are you sure you want to delete this program?')) return;
+    
+    // Handle demo mode deletion
+    if (isDemo) {
+      deleteDemoProgram(id);
+      return;
+    }
     
     try {
       const res = await fetch(`/api/programs/${id}`, { method: 'DELETE' });
@@ -211,13 +261,39 @@ export default function ProgramsPage() {
       {/* AI Generator Tab */}
       {activeTab === 'ai' && (
         <div className="opacity-0 animate-fade-in-up stagger-3">
-          {/* Show paywall for free users */}
-          {!isLoadingSubscription && subscription?.tier === 'free' && !generatedPlan && (
+          {/* Show demo mode message when in demo mode */}
+          {isDemo && (
+            <div className="bg-muted-main/50 border border-main/30 rounded-xl p-8 text-center">
+              <div className="w-16 h-16 bg-main/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-main" />
+              </div>
+              <h3 className="text-xl font-semibold text-bright-accent mb-2">AI Generation Unavailable</h3>
+              <p className="text-muted-accent mb-4 max-w-md mx-auto">
+                AI-powered program generation requires an OpenAI API key. In demo mode, you can explore the pre-built PPL program in the "My Programs" tab.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button variant="outline" disabled className="opacity-50 cursor-not-allowed">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate with AI
+                </Button>
+                <Button glow onClick={() => setActiveTab('my')}>
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  View Demo Programs
+                </Button>
+              </div>
+              <p className="text-xs text-muted-accent/60 mt-4">
+                To enable AI features, configure OPENAI_API_KEY in your environment variables.
+              </p>
+            </div>
+          )}
+
+          {/* Show paywall for free users (non-demo) */}
+          {!isDemo && !isLoadingSubscription && subscription?.tier === 'free' && !generatedPlan && (
             <ProPaywall onUpgrade={handleUpgrade} isLoading={isUpgrading} feature="ai" />
           )}
           
-          {/* Show generator for Pro users */}
-          {!isLoadingSubscription && subscription?.tier === 'pro' && !generatedPlan && (
+          {/* Show generator for Pro users (non-demo) */}
+          {!isDemo && !isLoadingSubscription && subscription?.tier === 'pro' && !generatedPlan && (
             <AIPlanGenerator
               onPlanGenerated={handlePlanGenerated}
               usageInfo={aiUsageInfo}
@@ -226,7 +302,7 @@ export default function ProgramsPage() {
           )}
           
           {/* Show generated plan */}
-          {generatedPlan && (
+          {!isDemo && generatedPlan && (
             <GeneratedPlanDisplay 
               plan={generatedPlan} 
               onReset={handleResetPlan}
@@ -237,7 +313,7 @@ export default function ProgramsPage() {
           )}
           
           {/* Loading state */}
-          {isLoadingSubscription && (
+          {!isDemo && isLoadingSubscription && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 text-main animate-spin" />
             </div>
@@ -252,22 +328,24 @@ export default function ProgramsPage() {
             <EmptyState
               icon={<BookOpen className="w-8 h-8 text-muted-accent" />}
               title="No saved programs"
-              description={subscription?.tier === 'pro' 
-                ? "Use the AI Generator to create a personalized program and save it here."
-                : "Upgrade to Pro to generate and save AI workout programs."
+              description={isDemo 
+                ? "The demo PPL program should be loaded automatically. Try refreshing the page."
+                : subscription?.tier === 'pro' 
+                  ? "Use the AI Generator to create a personalized program and save it here."
+                  : "Upgrade to Pro to generate and save AI workout programs."
               }
               action={
                 <div className="flex gap-3">
-                  {subscription?.tier === 'pro' ? (
+                  {!isDemo && subscription?.tier === 'pro' ? (
                     <Button glow onClick={() => setActiveTab('ai')}>
                       <Sparkles className="w-4 h-4 mr-2" />
                       Generate with AI
                     </Button>
-                  ) : (
+                  ) : !isDemo ? (
                     <Button glow onClick={handleUpgrade} isLoading={isUpgrading}>
                       Upgrade to Pro
                     </Button>
-                  )}
+                  ) : null}
                   <Link href="/dashboard/workouts/new">
                     <Button variant="outline">Log Workout</Button>
                   </Link>

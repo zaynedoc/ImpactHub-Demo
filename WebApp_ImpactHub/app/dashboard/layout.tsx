@@ -19,7 +19,7 @@ export default function DashboardLayout({
       {/* Background DarkVeil effect - slightly different hue from home for differentiation */}
       <div className="fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
         <DarkVeil 
-          hueShift={140} 
+          hueShift={260} 
           speed={0.25}
           noiseIntensity={0.015}
         />

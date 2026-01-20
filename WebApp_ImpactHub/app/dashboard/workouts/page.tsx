@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Toast, useToastLocal } from '@/components/ui/Toast';
+import { useDemoStore } from '@/lib/demo';
 
 interface WorkoutExercise {
   id: string;
@@ -33,13 +34,38 @@ export default function WorkoutsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const { toast, showToast, hideToast } = useToastLocal();
+  
+  // Demo store integration
+  const { state: demoState, deleteWorkout: deleteDemoWorkout } = useDemoStore();
+  const isDemo = demoState.isDemo;
 
   useEffect(() => {
     fetchWorkouts();
-  }, []);
+  }, [isDemo, demoState.workouts]);
 
   const fetchWorkouts = async () => {
     try {
+      // Use demo data when in demo mode
+      if (isDemo) {
+        const demoWorkouts: Workout[] = demoState.workouts.map(w => ({
+          id: w.id,
+          title: w.title,
+          workout_date: w.workout_date,
+          notes: w.notes,
+          duration_minutes: w.duration_minutes,
+          status: w.status,
+          workout_exercises: w.exercises.map(ex => ({
+            id: ex.id,
+            exercise_name: ex.exercise_name,
+            order_index: ex.order_index,
+            sets: ex.sets.map(s => ({ weight: s.weight, reps: s.reps })),
+          })),
+        }));
+        setWorkouts(demoWorkouts);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/workouts?pageSize=50');
       const result = await response.json();
       
@@ -59,6 +85,13 @@ export default function WorkoutsPage() {
 
   const handleDeleteWorkout = async (workoutId: string) => {
     if (!confirm('Are you sure you want to delete this workout?')) return;
+
+    // Handle demo mode deletion
+    if (isDemo) {
+      deleteDemoWorkout(workoutId);
+      showToast('Workout deleted from demo session', 'success');
+      return;
+    }
 
     try {
       const response = await fetch(`/api/workouts/${workoutId}`, {

@@ -10,24 +10,24 @@ const config: Config = {
     extend: {
       colors: {
         // Primary color palette
-        'muted-main': '#2C3531',
-        'main': '#1a8f91',  // Brightened from #116466
-        'muted-accent': '#D9B08C',
-        'accent': '#FFCB9A',
-        'bright-accent': '#D1E8E2',
+        'muted-main': '#1a1625',
+        'main': '#8b5cf6',  // Purple primary
+        'muted-accent': '#c4b5fd',
+        'accent': '#a78bfa',
+        'bright-accent': '#ede9fe',
         // Semantic aliases
-        background: '#2C3531',
-        foreground: '#D1E8E2',
+        background: '#1a1625',
+        foreground: '#ede9fe',
         primary: {
-          DEFAULT: '#1a8f91',  // Brightened to match main
-          hover: '#0d5052',
-          muted: '#2C3531',
+          DEFAULT: '#8b5cf6',  // Purple primary
+          hover: '#7c3aed',
+          muted: '#1a1625',
         },
         secondary: {
-          DEFAULT: '#D9B08C',
-          hover: '#c9a07c',
+          DEFAULT: '#c4b5fd',
+          hover: '#a78bfa',
         },
-        border: 'rgba(17, 100, 102, 0.3)',
+        border: 'rgba(139, 92, 246, 0.3)',
       },
       animation: {
         'slide-in': 'slideIn 0.3s ease-out',
@@ -65,12 +65,12 @@ const config: Config = {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         glow: {
-          '0%': { boxShadow: '0 0 5px #116466, 0 0 10px #116466, 0 0 15px #116466' },
-          '100%': { boxShadow: '0 0 10px #FFCB9A, 0 0 20px #FFCB9A, 0 0 30px #FFCB9A' },
+          '0%': { boxShadow: '0 0 5px #8b5cf6, 0 0 10px #8b5cf6, 0 0 15px #8b5cf6' },
+          '100%': { boxShadow: '0 0 10px #a78bfa, 0 0 20px #a78bfa, 0 0 30px #a78bfa' },
         },
         borderGlow: {
-          '0%, 100%': { borderColor: 'rgba(17, 100, 102, 0.5)' },
-          '50%': { borderColor: 'rgba(255, 203, 154, 0.5)' },
+          '0%, 100%': { borderColor: 'rgba(139, 92, 246, 0.5)' },
+          '50%': { borderColor: 'rgba(167, 139, 250, 0.5)' },
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
@@ -102,11 +102,11 @@ const config: Config = {
         },
       },
       boxShadow: {
-        'glow-main': '0 0 15px rgba(17, 100, 102, 0.5)',
-        'glow-accent': '0 0 15px rgba(255, 203, 154, 0.5)',
-        'glow-bright': '0 0 15px rgba(209, 232, 226, 0.5)',
+        'glow-main': '0 0 15px rgba(139, 92, 246, 0.5)',
+        'glow-accent': '0 0 15px rgba(167, 139, 250, 0.5)',
+        'glow-bright': '0 0 15px rgba(237, 233, 254, 0.5)',
         'lift': '0 10px 40px -10px rgba(0, 0, 0, 0.3)',
-        'lift-accent': '0 10px 40px -10px rgba(17, 100, 102, 0.3)',
+        'lift-accent': '0 10px 40px -10px rgba(139, 92, 246, 0.3)',
       },
       backdropBlur: {
         xs: '2px',
