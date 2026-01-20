@@ -1,4 +1,4 @@
-# ImpactHub
+﻿# ImpactHub
 
 A modern fitness tracking web application built with Next.js 14, Supabase, and Stripe. Track workouts, monitor progress, and generate AI-powered workout programs.
 
@@ -9,12 +9,54 @@ A modern fitness tracking web application built with Next.js 14, Supabase, and S
 
 ## Features
 
-- **Workout Logging** � Create, edit, and track workouts with exercises, sets, and reps
-- **Progress Tracking** � Visualize strength gains and personal records over time
-- **AI Plan Generator** � Generate personalized workout programs using OpenAI (Pro feature)
-- **Calendar View** � Schedule and view workouts on an interactive calendar
-- **Subscription System** � Free and Pro tiers with Stripe integration
-- **Secure Authentication** � Email/password auth with rate limiting via Supabase Auth
+- **Workout Logging** – Create, edit, and track workouts with exercises, sets, and reps
+- **Progress Tracking** – Visualize strength gains and personal records over time
+- **AI Plan Generator** – Generate personalized workout programs using OpenAI (Pro feature)
+- **Calendar View** – Schedule and view workouts on an interactive calendar
+- **Subscription System** – Free and Pro tiers with Stripe integration
+- **Secure Authentication** – Email/password auth with rate limiting via Supabase Auth
+- **Demo Mode (WIP)** – Test all features without API keys using built-in sample data
+
+## 🎮 Demo Mode (No API Keys Required)
+
+ImpactHub includes a fully functional demo mode that allows testers to explore all features without configuring Supabase, Stripe, or OpenAI API keys
+
+### How to Access Demo Mode
+
+1. **Run the app** without any environment variables configured
+2. **Navigate to the login page** at `/auth/login`
+3. **Choose one of two options:**
+   - Click **"Continue as Demo User"** button
+   - Use guest credentials: `guest@guest.com` / `Password123`
+
+### What's Included in Demo Mode
+
+| Feature | Demo Behavior |
+|---------|--------------|
+| **Dashboard** | Shows sample workout stats, PRs, and streak data |
+| **Workouts** | Pre-loaded with 3 completed workouts + 1 planned workout |
+| **Create Workout** | Save new workouts to the demo session (in-memory) |
+| **Programs** | Includes a full 6-day Push/Pull/Legs program + Starting Strength |
+| **AI Generator** | Disabled with message explaining API key requirement |
+| **Calendar** | Displays demo workouts on their respective dates |
+| **Progress** | Fully unlocked with sample PR history and volume analytics |
+| **Settings** | View demo user profile and preferences |
+
+### Demo Data Details
+
+- **Workouts**: 4 sample workouts spanning the past week
+- **Exercises**: 26 exercises in the autocomplete library
+- **Personal Records**: 5 PRs for major compound lifts
+- **Programs**: 
+  - Push Pull Legs (6-day split, 8 weeks, intermediate)
+  - Starting Strength (3-day full body, 12 weeks, beginner)
+
+### Important Notes
+
+- **Data is not persisted** – All changes are stored in memory and reset on page refresh
+- **No real authentication** – Demo mode bypasses Supabase Auth entirely
+- **AI features disabled** – Requires `OPENAI_API_KEY` to generate workout plans
+- **Payments not processed** – Stripe integration requires API keys
 
 ## Tech Stack
 
@@ -29,6 +71,23 @@ A modern fitness tracking web application built with Next.js 14, Supabase, and S
 | AI | OpenAI GPT-4o-mini |
 
 ## Getting Started
+
+### Quick Start (Demo Mode)
+
+Want to try ImpactHub without setting up any services? Run it in demo mode:
+
+```bash
+git clone https://github.com/zaynedoc/ImpactHub-Demo.git
+cd ImpactHub-Demo/WebApp_ImpactHub
+npm install
+npm run dev
+```
+
+Then visit [http://localhost:3000/auth/login](http://localhost:3000/auth/login) and click **"Continue as Demo User"**.
+
+---
+
+### Full Setup (With Backend Services)
 
 ### Prerequisites
 
@@ -130,24 +189,25 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ```
 WebApp_ImpactHub/
-??? app/                    # Next.js App Router
-?   ??? (public)/          # Public pages (landing, features, pricing)
-?   ??? api/               # API routes
-?   ??? auth/              # Auth pages (login, signup, etc.)
-?   ??? dashboard/         # Protected dashboard pages
-??? components/            # React components
-?   ??? ai/               # AI-related components
-?   ??? billing/          # Subscription/payment components
-?   ??? effects/          # Visual effect components
-?   ??? layout/           # Layout components (Navbar, Sidebar)
-?   ??? programs/         # Workout program components
-?   ??? ui/               # Reusable UI components
-??? lib/                   # Utility functions and configurations
-?   ??? supabase/         # Supabase client setup
-??? hooks/                 # Custom React hooks
-??? types/                 # TypeScript type definitions
-??? supabase/             # Database migrations and scripts
-    ??? migrations/       # SQL migration files
+├── app/                    # Next.js App Router
+│   ├── (public)/          # Public pages (landing, features, pricing)
+│   ├── api/               # API routes
+│   ├── auth/              # Auth pages (login, signup, etc.)
+│   └── dashboard/         # Protected dashboard pages
+├── components/            # React components
+│   ├── ai/               # AI-related components
+│   ├── billing/          # Subscription/payment components
+│   ├── effects/          # Visual effect components
+│   ├── layout/           # Layout components (Navbar, Sidebar)
+│   ├── programs/         # Workout program components
+│   └── ui/               # Reusable UI components
+├── lib/                   # Utility functions and configurations
+│   ├── demo/             # Demo mode store and sample data
+│   └── supabase/         # Supabase client setup
+├── hooks/                 # Custom React hooks
+├── types/                 # TypeScript type definitions
+└── supabase/             # Database migrations and scripts
+    └── migrations/       # SQL migration files
 ```
 
 ## Available Scripts
